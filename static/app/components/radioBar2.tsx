@@ -213,4 +213,8 @@ const RadioInput = styled('input')`
   border-radius: ${p => p.theme.borderRadius};
   transition: box-shadow 0.125s ease-out;
   z-index: -1;
+
+  &:focus {
+    outline: none;
+  }
 `;
