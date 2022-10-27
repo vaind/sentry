@@ -49,14 +49,15 @@ def build_team_linking_url(
     )
 
 
-class SelectTeamForm(forms.Form):  # type: ignore
+class SelectTeamForm(forms.Form):
     team = forms.ChoiceField(label="Team")
 
     def __init__(self, teams: Sequence[Team], *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-        self.fields["team"].choices = [(team.id, team.slug) for team in teams]
-        self.fields["team"].widget.choices = self.fields["team"].choices
+        # https://github.com/typeddjango/django-stubs/issues/1208
+        self.fields["team"].choices = [(team.id, team.slug) for team in teams]  # type: ignore[attr-defined]
+        self.fields["team"].widget.choices = self.fields["team"].choices  # type: ignore[attr-defined]
 
 
 class SlackLinkTeamView(BaseView):  # type: ignore

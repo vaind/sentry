@@ -423,7 +423,7 @@ class PullRequestEventWebhook(Webhook):
             pass
 
 
-class GitHubWebhookBase(View):  # type: ignore
+class GitHubWebhookBase(View):
     """https://developer.github.com/webhooks/"""
 
     def get_handler(self, event_type: str) -> Callable[[], Callable[[JSONData], Any]] | None:
@@ -441,7 +441,7 @@ class GitHubWebhookBase(View):  # type: ignore
         is_valid: bool = constant_time_compare(expected, signature)
         return is_valid
 
-    @method_decorator(csrf_exempt)  # type: ignore
+    @method_decorator(csrf_exempt)
     def dispatch(self, request: Request, *args: Any, **kwargs: Any) -> HttpResponse:
         if request.method != "POST":
             return HttpResponse(status=405)
@@ -509,7 +509,7 @@ class GitHubIntegrationsWebhookEndpoint(GitHubWebhookBase):
         "installation_repositories": InstallationRepositoryEventWebhook,
     }
 
-    @method_decorator(csrf_exempt)  # type: ignore
+    @method_decorator(csrf_exempt)
     def dispatch(self, request: Request, *args: Any, **kwargs: Any) -> HttpResponse:
         if request.method != "POST":
             return HttpResponse(status=405)

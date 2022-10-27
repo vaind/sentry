@@ -454,7 +454,7 @@ def validate_options(settings: Any) -> None:
 
 import django.db.models.base
 
-model_unpickle = django.db.models.base.model_unpickle
+model_unpickle = django.db.models.base.model_unpickle  # type: ignore[attr-defined]
 
 
 def __model_unpickle_compat(
@@ -477,7 +477,7 @@ def __simple_class_factory_compat(model: T, attrs: Any) -> T:
 def monkeypatch_model_unpickle() -> None:
     # https://code.djangoproject.com/ticket/27187
     # Django 1.10 breaks pickle compat with 1.9 models.
-    django.db.models.base.model_unpickle = __model_unpickle_compat
+    django.db.models.base.model_unpickle = __model_unpickle_compat  # type: ignore[attr-defined]
 
     # Django 1.10 needs this to unpickle 1.9 models, but we can't branch while
     # monkeypatching else our monkeypatched funcs won't be pickleable.

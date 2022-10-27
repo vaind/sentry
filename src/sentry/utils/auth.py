@@ -156,7 +156,7 @@ def _get_login_redirect(request: HttpRequest, default: str | None = None) -> str
     # If there is a pending 2fa authentication bound to the session then
     # we need to go to the 2fa dialog.
     if has_pending_2fa(request):
-        return cast(str, reverse("sentry-2fa-dialog"))
+        return reverse("sentry-2fa-dialog")
 
     # If we have a different URL to go after the 2fa flow we want to go to
     # that now here.
@@ -190,7 +190,7 @@ def is_valid_redirect(url: str, allowed_hosts: Container[str] | None = None) -> 
         return False
     if url.startswith(get_login_url()):
         return False
-    return cast(bool, is_safe_url(url, allowed_hosts=allowed_hosts))
+    return is_safe_url(url, allowed_hosts=allowed_hosts)
 
 
 def mark_sso_complete(request: HttpRequest, organization_id: int) -> None:
@@ -377,7 +377,7 @@ def set_active_org(request: HttpRequest, org_slug: str) -> None:
         request.session["activeorg"] = org_slug
 
 
-class EmailAuthBackend(ModelBackend):  # type: ignore
+class EmailAuthBackend(ModelBackend):
     """
     Authenticate against django.contrib.auth.models.User.
 

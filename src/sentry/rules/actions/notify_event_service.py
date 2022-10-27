@@ -137,7 +137,7 @@ def find_alert_rule_action_ui_component(app_platform_event: AppPlatformEvent) ->
     return bool(len(actions))
 
 
-class NotifyEventServiceForm(forms.Form):  # type: ignore
+class NotifyEventServiceForm(forms.Form):
     service = forms.ChoiceField(choices=())
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -145,8 +145,9 @@ class NotifyEventServiceForm(forms.Form):  # type: ignore
 
         super().__init__(*args, **kwargs)
 
-        self.fields["service"].choices = service_choices
-        self.fields["service"].widget.choices = self.fields["service"].choices
+        # https://github.com/typeddjango/django-stubs/issues/1208
+        self.fields["service"].choices = service_choices  # type: ignore[attr-defined]
+        self.fields["service"].widget.choices = self.fields["service"].choices  # type: ignore[attr-defined]
 
 
 class NotifyEventServiceAction(EventAction):

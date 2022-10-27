@@ -268,7 +268,7 @@ class HashDiscarded(Exception):
         self.tombstone_id = tombstone_id
 
 
-class ScoreClause(Func):  # type: ignore
+class ScoreClause(Func):
     def __init__(self, group=None, last_seen=None, times_seen=None, *args, **kwargs):  # type: ignore
         self.group = group
         self.last_seen = last_seen

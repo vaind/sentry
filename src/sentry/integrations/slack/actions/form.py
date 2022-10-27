@@ -18,7 +18,7 @@ from sentry.shared_integrations.exceptions import ApiRateLimitedError, Duplicate
 logger = logging.getLogger("sentry.rules")
 
 
-class SlackNotifyServiceForm(forms.Form):  # type: ignore
+class SlackNotifyServiceForm(forms.Form):
     workspace = forms.ChoiceField(choices=(), widget=forms.Select())
     channel = forms.CharField(widget=forms.TextInput())
     channel_id = forms.CharField(required=False, widget=forms.TextInput())
@@ -34,8 +34,9 @@ class SlackNotifyServiceForm(forms.Form):  # type: ignore
         if workspace_list:
             self.fields["workspace"].initial = workspace_list[0][0]
 
-        self.fields["workspace"].choices = workspace_list
-        self.fields["workspace"].widget.choices = self.fields["workspace"].choices
+        # https://github.com/typeddjango/django-stubs/issues/1208
+        self.fields["workspace"].choices = workspace_list  # type: ignore[attr-defined]
+        self.fields["workspace"].widget.choices = self.fields["workspace"].choices  # type: ignore[attr-defined]
 
         # XXX(meredith): When this gets set to True, it lets the RuleSerializer
         # know to only save if and when we have the channel_id. The rule will get saved
@@ -67,7 +68,7 @@ class SlackNotifyServiceForm(forms.Form):  # type: ignore
             # default to "#" if they have the channel name without the prefix
             channel_prefix = self.data["channel"][0] if self.data["channel"][0] == "@" else "#"
 
-        cleaned_data: dict[str, Any] = super().clean()
+        cleaned_data = super().clean()
         assert cleaned_data is not None
 
         workspace = cleaned_data.get("workspace")
@@ -135,7 +136,8 @@ class SlackNotifyServiceForm(forms.Form):  # type: ignore
         if channel_id is None and workspace is not None:
             params = {
                 "channel": channel,
-                "workspace": dict(self.fields["workspace"].choices).get(int(workspace)),
+                # https://github.com/typeddjango/django-stubs/issues/1208
+                "workspace": dict(self.fields["workspace"].choices).get(int(workspace)),  # type: ignore[attr-defined]
             }
             raise forms.ValidationError(
                 self._format_slack_error_message(
