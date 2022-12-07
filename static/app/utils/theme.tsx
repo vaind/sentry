@@ -12,7 +12,7 @@ export const lightColors = {
   black: '#1D1127',
   white: '#FFFFFF',
 
-  surface100: '#FAF9FB',
+  surface100: '#F7F6F9',
   surface200: '#FFFFFF',
   surface300: '#FFFFFF',
   surface400: '#F5F3F7',
