@@ -125,7 +125,7 @@ def handle_owner_assignment(job):
 
     with sentry_sdk.start_span(op="tasks.post_process_group.handle_owner_assignment"):
         try:
-            from sentry.models import ProjectOwnership
+            from sentry.models import GroupOwnerType, ProjectOwnership
 
             event = job["event"]
             project, group = event.project, event.group
@@ -134,12 +134,22 @@ def handle_owner_assignment(job):
                 with sentry_sdk.start_span(
                     op="post_process.handle_owner_assignment.cache_set_owner"
                 ):
-                    owner_key = "owner_exists:1:%s" % group.id
-                    owners_exists = cache.get(owner_key)
-                    if owners_exists is None:
-                        owners_exists = group.groupowner_set.exists()
+                    issue_owner_key = "owner_exists:1:%s" % group.id
+                    issue_owners_exists = cache.get(issue_owner_key)
+                    if issue_owners_exists is None:
+                        # We don't care if a Suspect Commit groupowjer exists
+                        issue_owners_exists = group.groupowner_set.filter(
+                            type__in=[
+                                GroupOwnerType.OWNERSHIP_RULE.value,
+                                GroupOwnerType.CODEOWNERS.value,
+                            ],
+                        ).exists()
                         # Cache for an hour if it's assigned. We don't need to move that fast.
-                        cache.set(owner_key, owners_exists, 3600 if owners_exists else 60)
+                        cache.set(
+                            issue_owner_key,
+                            issue_owners_exists,
+                            3600 if issue_owners_exists else 60,
+                        )
 
                 with sentry_sdk.start_span(
                     op="post_process.handle_owner_assignment.cache_set_assignee"
@@ -152,7 +162,7 @@ def handle_owner_assignment(job):
                         # Cache for an hour if it's assigned. We don't need to move that fast.
                         cache.set(assignee_key, assignees_exists, 3600 if assignees_exists else 60)
 
-                if owners_exists and assignees_exists:
+                if issue_owners_exists and assignees_exists:
                     return
 
                 with sentry_sdk.start_span(
@@ -174,7 +184,7 @@ def handle_owner_assignment(job):
                 with sentry_sdk.start_span(
                     op="post_process.handle_owner_assignment.handle_group_owners"
                 ):
-                    if issue_owners and not owners_exists:
+                    if issue_owners and not issue_owners_exists:
                         try:
                             handle_group_owners(project, group, issue_owners)
                         except Exception:
@@ -268,6 +278,7 @@ def handle_group_owners(project, group, issue_owners):
                         )
             if new_group_owners:
                 GroupOwner.objects.bulk_create(new_group_owners)
+
     except UnableToAcquireLock:
         pass
 
