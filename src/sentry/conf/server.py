@@ -1125,7 +1125,7 @@ SENTRY_FEATURES = {
     # Enable rate limits for inviting members.
     "organizations:invite-members-rate-limits": True,
     # Enable new issue actions on issue details
-    "organizations:issue-actions-v2": True,
+    "organizations:issue-actions-v2": False,
     # Enable new issue alert "issue owners" fallback
     "organizations:issue-alert-fallback-targeting": False,
     # Enable removing issue from issue list if action taken.
@@ -1216,6 +1216,8 @@ SENTRY_FEATURES = {
     "organizations:onboarding-heartbeat-footer": False,
     # Enable ANR rates in project details page
     "organizations:anr-rate": False,
+    # Enable deobfuscating exception values in Java issues
+    "organizations:java-exception-value-deobfuscation": False,
     # Enable tag improvements in the issue details page
     "organizations:issue-details-tag-improvements": False,
     # Enable the release details performance section
