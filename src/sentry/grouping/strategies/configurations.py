@@ -184,7 +184,6 @@ register_strategy_config(
     enhancements_base="mobile:2021-04-02",
 )
 
-
 # Deprecated strategies
 #
 # These should not be used.  They are experiments which should be phased out
