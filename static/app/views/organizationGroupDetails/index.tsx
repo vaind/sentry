@@ -2,22 +2,20 @@ import {useEffect} from 'react';
 import {RouteComponentProps} from 'react-router';
 
 import {fetchProjectDetails} from 'sentry/actionCreators/project';
-import {PageFilters} from 'sentry/types';
 import {analytics} from 'sentry/utils/analytics';
 import useApi from 'sentry/utils/useApi';
 import useOrganization from 'sentry/utils/useOrganization';
+import usePageFilters from 'sentry/utils/usePageFilters';
 import useProjects from 'sentry/utils/useProjects';
-import withPageFilters from 'sentry/utils/withPageFilters';
 
 import GroupDetails from './groupDetails';
 
 type Props = {
   children: React.ReactNode;
-  isGlobalSelectionReady: boolean;
-  selection: PageFilters;
 } & RouteComponentProps<{groupId: string; orgId: string}, {}>;
 
-function OrganizationGroupDetails({selection, ...props}: Props) {
+function OrganizationGroupDetails(props: Props) {
+  const {isReady, selection} = usePageFilters();
   const organization = useOrganization();
   const {projects} = useProjects();
   const api = useApi();
@@ -48,9 +46,10 @@ function OrganizationGroupDetails({selection, ...props}: Props) {
       environments={selection.environments}
       organization={organization}
       projects={projects}
+      isGlobalSelectionReady={isReady}
       {...props}
     />
   );
 }
 
-export default withPageFilters(OrganizationGroupDetails);
+export default OrganizationGroupDetails;
