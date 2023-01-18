@@ -291,7 +291,7 @@ type Props = ChartProps['tooltip'] &
     chartId?: string;
   };
 
-export default function Tooltip({
+export function Tooltip({
   filter,
   isGroupedByDate,
   showTimeInTooltip,

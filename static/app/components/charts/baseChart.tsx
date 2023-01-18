@@ -46,7 +46,7 @@ import {defined} from 'sentry/utils';
 
 import Grid from './components/grid';
 import Legend from './components/legend';
-import Tooltip, {TooltipSubLabel} from './components/tooltip';
+import {Tooltip, TooltipSubLabel} from './components/tooltip';
 import XAxis from './components/xAxis';
 import YAxis from './components/yAxis';
 import LineSeries from './series/lineSeries';
