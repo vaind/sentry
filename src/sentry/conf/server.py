@@ -655,6 +655,10 @@ CELERY_QUEUES = [
         "releasemonitor",
         routing_key="releasemonitor",
     ),
+    Queue(
+        "dynamicsampling",
+        routing_key="dynamicsampling",
+    ),
     Queue("incidents", routing_key="incidents"),
     Queue("incident_snapshots", routing_key="incident_snapshots"),
     Queue("incidents", routing_key="incidents"),
@@ -1067,7 +1071,7 @@ SENTRY_FEATURES = {
     # Try to derive normalization rules by clustering transaction names.
     "organizations:transaction-name-clusterer": False,
     # Sanitize transaction names in the ingestion pipeline.
-    "organizations:transaction-name-sanitization": False,  # DEPRECATED
+    "organizations:transaction-name-sanitization": False,
     # Extraction metrics for transactions during ingestion.
     "organizations:transaction-metrics-extraction": False,
     # True if release-health related queries should be run against both
