@@ -36,7 +36,7 @@ def get_test_message(
             {"name": "Line", "value": "40", "important": True},
             {"name": "Memory", "value": "breached", "important": False},
         ],
-        "type": GroupType.PROFILE_BLOCKED_THREAD,
+        "type": GroupType.PROFILE_BLOCKED_THREAD.value,
         "detection_time": now.isoformat(),
     }
 
@@ -62,7 +62,8 @@ class IssueOccurrenceTestMessage(OccurrenceTestMixin, TestCase, SnubaTestCase): 
     @pytest.mark.django_db
     def test_occurrence_consumer_with_event(self) -> None:
         message = get_test_message(self.project.id)
-        result = _process_message(message)
+        with self.feature("organizations:profile-blocked-main-thread-ingest"):
+            result = _process_message(message)
         assert result is not None
         occurrence = result[0]
 

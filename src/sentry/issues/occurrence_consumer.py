@@ -13,11 +13,14 @@ from arroyo.types import Commit, Message, Partition
 from django.conf import settings
 from django.utils import timezone
 
+from sentry import features
 from sentry.event_manager import GroupInfo
 from sentry.eventstore.models import Event
 from sentry.issues.ingest import save_issue_occurrence
 from sentry.issues.issue_occurrence import IssueOccurrence, IssueOccurrenceData
 from sentry.issues.json_schemas import EVENT_PAYLOAD_SCHEMA
+from sentry.models import Organization, Project
+from sentry.types.issues import GroupType
 from sentry.utils import json, metrics
 from sentry.utils.batching_kafka_consumer import create_topics
 from sentry.utils.canonical import CanonicalKeyDict
@@ -82,6 +85,16 @@ def save_event_from_occurrence(
 def process_event_and_issue_occurrence(
     occurrence_data: IssueOccurrenceData, event_data: Dict[str, Any]
 ) -> Optional[Tuple[IssueOccurrence, Optional[GroupInfo]]]:
+    # XXX: For now, just hardcode to work with profile blocked threads.
+    if occurrence_data["type"] != GroupType.PROFILE_BLOCKED_THREAD.value:
+        return None
+
+    project = Project.objects.get_from_cache(id=event_data["project_id"])
+    organization = Organization.objects.get_from_cache(id=project.organization_id)
+
+    if not features.has("organizations:profile-blocked-main-thread-ingest", organization):
+        return None
+
     try:
         event = save_event_from_occurrence(event_data)
     except Exception:
