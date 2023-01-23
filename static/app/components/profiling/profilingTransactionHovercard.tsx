@@ -109,7 +109,7 @@ function ProfilingTransactionHovercardBody({
     query: '',
     selection,
     transaction,
-    sort: '-p99',
+    sort: '-p95',
     functionType: 'application',
   });
 
@@ -170,7 +170,7 @@ function ProfilingTransactionHovercardBody({
       <Flex column h={125}>
         <FunctionsMiniGrid>
           <FunctionsMiniGridHeader>{t('Slowest app functions')}</FunctionsMiniGridHeader>
-          <FunctionsMiniGridHeader align="right">{t('P99')}</FunctionsMiniGridHeader>
+          <FunctionsMiniGridHeader align="right">{t('P95')}</FunctionsMiniGridHeader>
           <FunctionsMiniGridHeader align="right">{t('Count')}</FunctionsMiniGridHeader>
 
           {functions.type === 'resolved' &&
@@ -192,7 +192,7 @@ function ProfilingTransactionHovercardBody({
                     </TextTruncate>
                   </FunctionsMiniGridCell>
                   <FunctionsMiniGridCell align="right">
-                    <PerformanceDuration nanoseconds={f.p99} abbreviation />
+                    <PerformanceDuration nanoseconds={f.p95} abbreviation />
                   </FunctionsMiniGridCell>
                   <FunctionsMiniGridCell align="right">
                     <NumberContainer>{f.count}</NumberContainer>
