@@ -134,7 +134,10 @@ export function FlamegraphTreeTable({
     }
 
     canvasPoolManager.dispatch('highlight frame', [
-      flamegraph.findAllMatchingFrames(clickedContextMenuNode.node),
+      flamegraph.findAllMatchingFrames(
+        clickedContextMenuNode.node.frame.name,
+        clickedContextMenuNode.node.frame.image
+      ),
       'selected',
     ]);
   }, [canvasPoolManager, clickedContextMenuNode, flamegraph]);

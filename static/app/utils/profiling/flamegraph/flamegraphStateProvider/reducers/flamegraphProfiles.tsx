@@ -33,7 +33,7 @@ type FlamegraphProfilesAction =
   | JumpToView;
 
 export type FlamegraphProfiles = {
-  highlightFrames: {name: string; package: string} | null;
+  highlightFrames: {name: string | undefined; package: string | undefined} | null;
   selectedRoot: FlamegraphFrame | null;
   threadId: number | null;
   zoomIntoFrame: FlamegraphFrame | null;

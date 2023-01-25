@@ -57,8 +57,8 @@ function findLongestMatchingFrame(
 
 function isValidHighlightFrame(
   frame: Partial<FlamegraphProfiles['highlightFrames']> | null | undefined
-): frame is NonNullable<FlamegraphProfiles['highlightFrames']> {
-  return !!frame && typeof frame.name === 'string';
+): frame is FlamegraphProfiles['highlightFrames'] {
+  return !!frame && (typeof frame.name === 'string' || typeof frame.package === 'string');
 }
 
 interface FlamegraphStateProviderProps {
@@ -70,6 +70,7 @@ export function FlamegraphStateProvider(
   props: FlamegraphStateProviderProps
 ): React.ReactElement {
   const profileGroup = useProfileGroup();
+
   const [state, dispatch, {nextState, previousState}] = useUndoableReducer(
     flamegraphStateReducer,
     {
@@ -77,8 +78,11 @@ export function FlamegraphStateProvider(
         highlightFrames: isValidHighlightFrame(
           props.initialState?.profiles?.highlightFrames
         )
-          ? (props.initialState?.profiles
-              ?.highlightFrames as FlamegraphProfiles['highlightFrames'])
+          ? {
+              name: undefined,
+              package: undefined,
+              ...props.initialState?.profiles?.highlightFrames,
+            }
           : isValidHighlightFrame(DEFAULT_FLAMEGRAPH_STATE.profiles.highlightFrames)
           ? DEFAULT_FLAMEGRAPH_STATE.profiles.highlightFrames
           : null,

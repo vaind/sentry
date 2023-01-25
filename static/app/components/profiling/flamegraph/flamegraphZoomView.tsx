@@ -577,7 +577,10 @@ function FlamegraphZoomView({
       },
     });
 
-    const frames = flamegraph.findAllMatchingFrames(hoveredNodeOnContextMenuOpen.current);
+    const frames = flamegraph.findAllMatchingFrames(
+      hoveredNodeOnContextMenuOpen.current.frame.name,
+      hoveredNodeOnContextMenuOpen.current.frame.image
+    );
     const rectFrames = frames.map(f => new Rect(f.start, f.depth, f.end - f.start, 1));
     const newConfigView = computeMinZoomConfigViewForFrames(
       flamegraphView.configView,
