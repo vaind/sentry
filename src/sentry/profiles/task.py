@@ -19,7 +19,7 @@ from sentry.models import Organization, Project, ProjectDebugFile
 from sentry.profiles.device import classify_device
 from sentry.profiles.utils import get_from_profiling_service
 from sentry.signals import first_profile_received
-from sentry.tasks.base import instrumented_task
+from sentry.tasks.base import instrumented_task, retry
 from sentry.tasks.symbolication import RetrySymbolication
 from sentry.utils import json, kafka_config, metrics
 from sentry.utils.outcomes import Outcome, track_outcome
@@ -37,7 +37,6 @@ class VroomTimeout(Exception):
 @instrumented_task(  # type: ignore
     name="sentry.profiles.task.process_profile",
     queue="profiles.process",
-    autoretry_for=(VroomTimeout,),  # Retry when vroom returns a GCS timeout
     retry_backoff=True,
     retry_backoff_max=60,  # up to 1 min
     retry_jitter=True,
@@ -45,6 +44,7 @@ class VroomTimeout(Exception):
     max_retries=5,
     acks_late=True,
 )
+@retry(on=(VroomTimeout,))  # Retry when vroom returns a GCS timeout
 def process_profile_task(
     profile: Profile,
     **kwargs: Any,
