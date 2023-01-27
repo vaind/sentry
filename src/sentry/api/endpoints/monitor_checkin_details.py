@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from io import BytesIO
+
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -24,6 +26,7 @@ from sentry.apidocs.parameters import GLOBAL_PARAMS, MONITOR_PARAMS
 from sentry.apidocs.utils import inline_sentry_response_serializer
 from sentry.models import (
     CheckInStatus,
+    File,
     Monitor,
     MonitorCheckIn,
     MonitorStatus,
@@ -31,6 +34,7 @@ from sentry.models import (
     ProjectKey,
     ProjectStatus,
 )
+from sentry.utils import json
 from sentry.utils.sdk import bind_organization_context, configure_scope
 
 
@@ -179,6 +183,15 @@ class MonitorCheckInDetailsEndpoint(Endpoint):
         elif params.get("status", checkin.status) in CheckInStatus.FINISHED_VALUES:
             duration = int((current_datetime - checkin.date_added).total_seconds() * 1000)
             params["duration"] = duration
+
+        if "attachment" in result:
+            file = File.objects.create(
+                name=str(checkin.guid),
+                type="checkin.attachment",
+                headers={},
+            )
+            file.putfile(BytesIO(json.dumps(result["attachment"]).encode()))
+            params["attachment"] = file
 
         with transaction.atomic():
             checkin.update(**params)

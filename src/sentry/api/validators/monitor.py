@@ -143,3 +143,4 @@ class MonitorCheckInValidator(serializers.Serializer):
         )
     )
     duration = EmptyIntegerField(required=False, allow_null=True)
+    attachment = ObjectField(required=False, allow_null=True)

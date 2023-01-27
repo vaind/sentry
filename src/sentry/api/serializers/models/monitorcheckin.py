@@ -14,6 +14,7 @@ class MonitorCheckInSerializer(Serializer):
             "status": obj.get_status_display(),
             "duration": obj.duration,
             "dateCreated": obj.date_added,
+            "attachment": obj.attachment.getfile().read() if obj.attachment else None,
         }
 
 
@@ -22,3 +23,4 @@ class MonitorCheckInSerializerResponse(TypedDict):
     status: str
     duration: int
     dateCreated: datetime
+    attachment: bytes
