@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+"""
+DEV ONLY:
+Backfill CodeReviewEvent records .
+
+Usage:
+    1. Export as CSV:
+       https://redash.getsentry.net/queries/10580/source
+
+    2. Run this script:
+
+        sentry exec bin/backfill-code-review-events events.csv
+        sentry exec bin/backfill-code-review-events events.csv --dry-run
+"""
+
+from sentry.runner import configure
+
+configure()
+
+import argparse
+import csv
+import logging
+from datetime import datetime
+
+from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.repository import Repository
+
+logger = logging.getLogger(__name__)
+
+
+def parse_dt(value: str | None) -> datetime | None:
+    if not value or value in ("None", ""):
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Backfill CodeReviewEvent from Seer CSV export")
+    parser.add_argument("csv_file", help="CSV file exported from the Seer events query")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would be created without writing to DB",
+    )
+    args = parser.parse_args()
+
+    with open(args.csv_file) as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+    logger.info("Read %d rows from %s", len(rows), args.csv_file)
+
+    repo_cache: dict[str, Repository | None] = {}
+
+    created = skipped = errors = 0
+
+    for i, row in enumerate(rows):
+        run_id = row.get("run_id", "").strip()
+        repo_full_name = row.get("repo_full_name", "").strip()
+        pr_number = row.get("pr_number", "").strip()
+
+        if not run_id or not repo_full_name or not pr_number:
+            logger.warning("Row %d: skipping, missing run_id/repo/pr_number", i + 1)
+            errors += 1
+            continue
+
+        # Look up repository
+        if repo_full_name not in repo_cache:
+            try:
+                repo_cache[repo_full_name] = Repository.objects.get(name=repo_full_name)
+            except Repository.DoesNotExist:
+                logger.warning("Repository '%s' not found in Sentry DB", repo_full_name)
+                repo_cache[repo_full_name] = None
+            except Repository.MultipleObjectsReturned:
+                repo_cache[repo_full_name] = Repository.objects.filter(name=repo_full_name).first()
+
+        repo = repo_cache[repo_full_name]
+        if repo is None:
+            errors += 1
+            continue
+
+        org_id = repo.organization_id
+        github_delivery_id = f"backfill-run-{run_id}"
+
+        # Check if already exists
+        if CodeReviewEvent.objects.filter(github_delivery_id=github_delivery_id).exists():
+            skipped += 1
+            continue
+
+        comments_posted_raw = row.get("comments_posted", "").strip()
+        comments_posted = int(comments_posted_raw) if comments_posted_raw else 0
+
+        has_completion = row.get("completed_at", "").strip() not in ("", "None")
+        status = (
+            CodeReviewEventStatus.REVIEW_COMPLETED
+            if has_completion
+            else CodeReviewEventStatus.SENT_TO_SEER
+        )
+
+        pr_url = f"https://github.com/{repo_full_name}/pull/{pr_number}"
+
+        if args.dry_run:
+            logger.info(
+                "Would create: PR #%s run=%s comments=%d status=%s",
+                pr_number,
+                run_id,
+                comments_posted,
+                status,
+            )
+            created += 1
+            continue
+
+        try:
+            CodeReviewEvent.objects.create(
+                organization_id=org_id,
+                repository_id=repo.id,
+                pr_number=int(pr_number),
+                pr_author=row.get("pr_author", "").strip() or None,
+                pr_url=pr_url,
+                github_event_type="pull_request",
+                github_event_action="opened",
+                github_delivery_id=github_delivery_id,
+                trigger=row.get("trigger", "").strip() or None,
+                trigger_user=row.get("trigger_user", "").strip() or None,
+                trigger_at=parse_dt(row.get("source_trigger_at")),
+                status=status,
+                seer_run_id=run_id,
+                comments_posted=comments_posted,
+                webhook_received_at=parse_dt(row.get("sentry_received_trigger_at")),
+                sent_to_seer_at=parse_dt(row.get("seer_received_at")),
+                review_started_at=parse_dt(row.get("started_at")),
+                review_completed_at=parse_dt(row.get("completed_at")),
+            )
+            created += 1
+        except Exception:
+            logger.exception("Row %d (run=%s): error creating record", i + 1, run_id)
+            errors += 1
+
+    action = "Would create" if args.dry_run else "Created"
+    logger.info("%s %d, skipped %d (already exist), errors %d", action, created, skipped, errors)
+
+
+if __name__ == "__main__":
+    main()
+else:
+    # When run via `sentry exec`, __name__ is not __main__
+    main()
