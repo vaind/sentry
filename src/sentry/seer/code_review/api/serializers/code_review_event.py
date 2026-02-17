@@ -22,9 +22,9 @@ class CodeReviewEventResponse(TypedDict):
     prTitle: str | None
     prAuthor: str | None
     prUrl: str | None
-    githubEventType: str
-    githubEventAction: str
-    githubDeliveryId: str | None
+    triggerEventType: str
+    triggerEventAction: str
+    triggerId: str | None
     trigger: str | None
     triggerUser: str | None
     triggerAt: str | None
@@ -69,9 +69,9 @@ class CodeReviewEventSerializer(Serializer):
             "prTitle": obj.pr_title,
             "prAuthor": obj.pr_author,
             "prUrl": obj.pr_url,
-            "githubEventType": obj.github_event_type,
-            "githubEventAction": obj.github_event_action,
-            "githubDeliveryId": obj.github_delivery_id,
+            "triggerEventType": obj.trigger_event_type,
+            "triggerEventAction": obj.trigger_event_action,
+            "triggerId": obj.trigger_id,
             "trigger": obj.trigger,
             "triggerUser": obj.trigger_user,
             "triggerAt": _iso_or_none(obj.trigger_at),

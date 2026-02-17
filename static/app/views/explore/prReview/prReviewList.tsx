@@ -11,7 +11,11 @@ import {IconOpen} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import useOrganization from 'sentry/utils/useOrganization';
 import type {CodeReviewPR} from 'sentry/views/explore/prReview/types';
-import {formatStatus, statusToTagVariant} from 'sentry/views/explore/prReview/utils';
+import {
+  formatStatus,
+  prStateToTagVariant,
+  statusToTagVariant,
+} from 'sentry/views/explore/prReview/utils';
 
 interface Props {
   isLoading: boolean;
@@ -34,7 +38,8 @@ export function PrReviewList({prs, isLoading, pageLinks}: Props) {
           t('PR #'),
           t('Title'),
           t('Author'),
-          t('Status'),
+          t('PR Status'),
+          t('Review Status'),
           t('Reviews'),
           t('Comments'),
           t('Last Activity'),
@@ -62,6 +67,15 @@ export function PrReviewList({prs, isLoading, pageLinks}: Props) {
               </Link>
             </div>
             <div>{pr.prAuthor ?? '—'}</div>
+            <div>
+              {pr.prState ? (
+                <Tag variant={prStateToTagVariant(pr.prState)}>
+                  {formatStatus(pr.prState)}
+                </Tag>
+              ) : (
+                '—'
+              )}
+            </div>
             <div>
               <Tag variant={statusToTagVariant(pr.latestStatus)}>
                 {formatStatus(pr.latestStatus)}

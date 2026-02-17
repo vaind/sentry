@@ -27,7 +27,7 @@ def _parse_timestamp(value: str | None) -> datetime | None:
 
 def report_code_review_result(
     *,
-    github_delivery_id: str,
+    trigger_id: str,
     seer_run_id: str,
     status: str,
     comments_posted: int,
@@ -37,17 +37,17 @@ def report_code_review_result(
 ) -> dict:
     """
     Called by Seer after completing (or failing) a code review.
-    Updates the corresponding CodeReviewEvent record matched by github_delivery_id.
+    Updates the corresponding CodeReviewEvent record matched by trigger_id.
     """
     event_record = CodeReviewEvent.objects.filter(
-        github_delivery_id=github_delivery_id,
+        trigger_id=trigger_id,
     ).first()
 
     if event_record is None:
         logger.warning(
             "seer.code_review.callback.no_matching_event",
             extra={
-                "github_delivery_id": github_delivery_id,
+                "trigger_id": trigger_id,
                 "seer_run_id": seer_run_id,
             },
         )

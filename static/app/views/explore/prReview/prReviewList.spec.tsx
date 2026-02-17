@@ -3,41 +3,28 @@ import {OrganizationFixture} from 'sentry-fixture/organization';
 import {render, screen} from 'sentry-test/reactTestingLibrary';
 
 import {PrReviewList} from 'sentry/views/explore/prReview/prReviewList';
-import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
+import type {CodeReviewPR} from 'sentry/views/explore/prReview/types';
 
 describe('PrReviewList', () => {
   const organization = OrganizationFixture();
 
-  const mockEvent: CodeReviewEvent = {
-    id: '1',
-    organizationId: '1',
+  const mockPR: CodeReviewPR = {
     repositoryId: '10',
     repositoryName: 'owner/repo',
     prNumber: 42,
     prTitle: 'Fix the bug',
     prAuthor: 'testuser',
     prUrl: 'https://github.com/owner/repo/pull/42',
-    githubEventType: 'pull_request',
-    githubEventAction: 'opened',
-    githubDeliveryId: 'abc-123',
-    trigger: 'on_ready_for_review',
-    triggerUser: null,
-    triggerAt: null,
-    targetCommitSha: null,
-    status: 'review_completed',
-    denialReason: null,
-    dateAdded: '2026-01-15T10:00:00Z',
-    webhookReceivedAt: null,
-    taskEnqueuedAt: null,
-    sentToSeerAt: null,
-    reviewStartedAt: null,
-    reviewCompletedAt: null,
-    seerRunId: null,
-    commentsPosted: 3,
+    latestStatus: 'review_completed',
+    latestTrigger: 'on_ready_for_review',
+    prState: 'open',
+    eventCount: 2,
+    totalComments: 3,
+    lastActivity: '2026-01-15T10:00:00Z',
   };
 
-  it('renders events in the table', () => {
-    render(<PrReviewList events={[mockEvent]} isLoading={false} pageLinks={null} />, {
+  it('renders PRs in the table', () => {
+    render(<PrReviewList prs={[mockPR]} isLoading={false} pageLinks={null} />, {
       organization,
     });
 
@@ -48,16 +35,16 @@ describe('PrReviewList', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('renders empty message when no events', () => {
-    render(<PrReviewList events={[]} isLoading={false} pageLinks={null} />, {
+  it('renders empty message when no PRs', () => {
+    render(<PrReviewList prs={[]} isLoading={false} pageLinks={null} />, {
       organization,
     });
 
-    expect(screen.getByText('No code review events found.')).toBeInTheDocument();
+    expect(screen.getByText('No pull requests found.')).toBeInTheDocument();
   });
 
   it('renders loading state', () => {
-    render(<PrReviewList events={undefined} isLoading pageLinks={null} />, {
+    render(<PrReviewList prs={undefined} isLoading pageLinks={null} />, {
       organization,
     });
 
@@ -65,15 +52,18 @@ describe('PrReviewList', () => {
   });
 
   it('renders table headers', () => {
-    render(<PrReviewList events={[mockEvent]} isLoading={false} pageLinks={null} />, {
+    render(<PrReviewList prs={[mockPR]} isLoading={false} pageLinks={null} />, {
       organization,
     });
 
     expect(screen.getByText('Repository')).toBeInTheDocument();
-    expect(screen.getByText('PR')).toBeInTheDocument();
-    expect(screen.getByText('Trigger')).toBeInTheDocument();
-    expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.getByText('Time')).toBeInTheDocument();
+    expect(screen.getByText('PR #')).toBeInTheDocument();
+    expect(screen.getByText('Title')).toBeInTheDocument();
+    expect(screen.getByText('Author')).toBeInTheDocument();
+    expect(screen.getByText('PR Status')).toBeInTheDocument();
+    expect(screen.getByText('Review Status')).toBeInTheDocument();
+    expect(screen.getByText('Reviews')).toBeInTheDocument();
     expect(screen.getByText('Comments')).toBeInTheDocument();
+    expect(screen.getByText('Last Activity')).toBeInTheDocument();
   });
 });

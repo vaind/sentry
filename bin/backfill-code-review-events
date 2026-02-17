@@ -162,20 +162,20 @@ def main():
 
         org_id = repo.organization_id
 
-        # Try to extract github_delivery_id from run_state JSON
+        # Try to extract trigger_id from run_state JSON
         state = parse_run_state_value(row.get("run_state_value"))
-        github_delivery_id = None
+        trigger_id = None
         if state:
-            github_delivery_id = state.get("github_delivery_id")
-            if not github_delivery_id:
+            trigger_id = state.get("trigger_id")
+            if not trigger_id:
                 request_data = state.get("request")
                 if isinstance(request_data, dict):
-                    github_delivery_id = request_data.get("github_delivery_id")
-        if not github_delivery_id:
-            github_delivery_id = f"backfill-run-{run_id}"
+                    trigger_id = request_data.get("trigger_id")
+        if not trigger_id:
+            trigger_id = f"backfill-run-{run_id}"
 
         # Check if already exists
-        if CodeReviewEvent.objects.filter(github_delivery_id=github_delivery_id).exists():
+        if CodeReviewEvent.objects.filter(trigger_id=trigger_id).exists():
             skipped += 1
             continue
 
@@ -198,7 +198,7 @@ def main():
                 pr_number,
                 pr_title or "(no title)",
                 run_id,
-                github_delivery_id,
+                trigger_id,
                 comments_posted,
                 status,
             )
@@ -213,9 +213,9 @@ def main():
                 pr_title=pr_title,
                 pr_author=row.get("pr_author", "").strip() or None,
                 pr_url=pr_url,
-                github_event_type="pull_request",
-                github_event_action="opened",
-                github_delivery_id=github_delivery_id,
+                trigger_event_type="pull_request",
+                trigger_event_action="opened",
+                trigger_id=trigger_id,
                 trigger=row.get("trigger", "").strip() or None,
                 trigger_user=row.get("trigger_user", "").strip() or None,
                 trigger_at=parse_dt(row.get("source_trigger_at")),

@@ -44,11 +44,12 @@ class CodeReviewEvent(Model):
     pr_title = models.TextField(null=True)
     pr_author = models.TextField(null=True)
     pr_url = models.TextField(null=True)
+    pr_state = models.CharField(max_length=16, null=True)  # open, closed, merged
 
-    # GitHub webhook metadata (github_ prefix for GitHub-specific values)
-    github_event_type = models.CharField(max_length=64)
-    github_event_action = models.CharField(max_length=64)
-    github_delivery_id = models.CharField(max_length=64, null=True)
+    # Webhook event metadata
+    trigger_event_type = models.CharField(max_length=64)
+    trigger_event_action = models.CharField(max_length=64)
+    trigger_id = models.CharField(max_length=64, null=True)
 
     # Provider-agnostic fields (aligns with SeerCodeReviewConfig)
     trigger = models.CharField(max_length=64, null=True)
@@ -86,9 +87,9 @@ class CodeReviewEvent(Model):
         )
         constraints = [
             models.UniqueConstraint(
-                fields=["github_delivery_id"],
-                name="unique_github_delivery_id",
-                condition=models.Q(github_delivery_id__isnull=False),
+                fields=["trigger_id"],
+                name="unique_trigger_id",
+                condition=models.Q(trigger_id__isnull=False),
             ),
         ]
 

@@ -17,8 +17,8 @@ class OrganizationCodeReviewPRsTest(APITestCase):
         defaults = {
             "organization_id": self.organization.id,
             "repository_id": self.repo.id,
-            "github_event_type": "pull_request",
-            "github_event_action": "opened",
+            "trigger_event_type": "pull_request",
+            "trigger_event_action": "opened",
             "status": CodeReviewEventStatus.REVIEW_COMPLETED,
             "pr_number": 42,
         }
@@ -136,8 +136,8 @@ class OrganizationCodeReviewPRsTest(APITestCase):
         CodeReviewEvent.objects.create(
             organization_id=other_org.id,
             repository_id=other_repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
             status=CodeReviewEventStatus.REVIEW_COMPLETED,
             pr_number=99,
         )

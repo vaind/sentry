@@ -13,8 +13,8 @@ class TestCleanupOldCodeReviewEvents(TestCase):
         old_event = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
             status=CodeReviewEventStatus.REVIEW_COMPLETED,
         )
         # Manually set date_added to beyond retention period
@@ -31,8 +31,8 @@ class TestCleanupOldCodeReviewEvents(TestCase):
         recent_event = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
             status=CodeReviewEventStatus.REVIEW_COMPLETED,
         )
 
@@ -50,8 +50,8 @@ class TestCleanupOldCodeReviewEvents(TestCase):
         old_event = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
             status=CodeReviewEventStatus.REVIEW_COMPLETED,
         )
         CodeReviewEvent.objects.filter(id=old_event.id).update(
@@ -61,8 +61,8 @@ class TestCleanupOldCodeReviewEvents(TestCase):
         new_event = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="synchronize",
+            trigger_event_type="pull_request",
+            trigger_event_action="synchronize",
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 

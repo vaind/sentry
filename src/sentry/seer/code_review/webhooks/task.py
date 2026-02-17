@@ -22,7 +22,7 @@ from sentry.taskworker.retry import Retry
 from sentry.taskworker.state import current_task
 from sentry.utils import metrics
 
-from ..event_recorder import find_event_by_delivery_id, update_event_status
+from ..event_recorder import find_event_by_trigger_id, update_event_status
 from ..metrics import WebhookFilteredReason, record_webhook_enqueued, record_webhook_filtered
 from ..utils import convert_enum_keys_to_strings, get_seer_endpoint_for_event, make_seer_request
 
@@ -61,14 +61,14 @@ def schedule_task(
         update_event_status(event_record, "webhook_filtered", denial_reason="transform_failed")
         return
 
-    github_delivery_id = getattr(event_record, "github_delivery_id", None) if event_record else None
+    trigger_id = getattr(event_record, "trigger_id", None) if event_record else None
 
     # Convert enum to string for Celery serialization
     process_github_webhook_event.delay(
         github_event=github_event.value,
         event_payload=transformed_event,
         enqueued_at_str=datetime.now(timezone.utc).isoformat(),
-        github_delivery_id=github_delivery_id,
+        trigger_id=trigger_id,
     )
     record_webhook_enqueued(github_event, github_event_action)
     update_event_status(event_record, "task_enqueued")
@@ -85,7 +85,7 @@ def process_github_webhook_event(
     enqueued_at_str: str,
     github_event: str,
     event_payload: Mapping[str, Any],
-    github_delivery_id: str | None = None,
+    trigger_id: str | None = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -95,10 +95,10 @@ def process_github_webhook_event(
         enqueued_at_str: The timestamp when the task was enqueued
         github_event: The GitHub webhook event type from X-GitHub-Event header (e.g., "check_run", "pull_request")
         event_payload: The payload of the webhook event
-        github_delivery_id: Correlation ID for tracking the event through the pipeline
+        trigger_id: Correlation ID for tracking the event through the pipeline
         **kwargs: Parameters to pass to webhook handler functions
     """
-    event_record = find_event_by_delivery_id(github_delivery_id) if github_delivery_id else None
+    event_record = find_event_by_trigger_id(trigger_id) if trigger_id else None
 
     status = "success"
     should_record_latency = True

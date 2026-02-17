@@ -110,6 +110,7 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
                     "prTitle": latest_event.pr_title if latest_event else None,
                     "prAuthor": latest_event.pr_author if latest_event else None,
                     "prUrl": latest_event.pr_url if latest_event else None,
+                    "prState": latest_event.pr_state if latest_event else None,
                     "latestStatus": latest_event.status if latest_event else None,
                     "latestTrigger": latest_event.trigger if latest_event else None,
                     "eventCount": group["event_count"],

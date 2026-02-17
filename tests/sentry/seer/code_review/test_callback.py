@@ -12,15 +12,15 @@ class TestReportCodeReviewResult(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=self.repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="match-by-delivery",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="match-by-delivery",
             pr_number=42,
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
         result = report_code_review_result(
-            github_delivery_id="match-by-delivery",
+            trigger_id="match-by-delivery",
             seer_run_id="seer-run-001",
             status="completed",
             comments_posted=3,
@@ -34,7 +34,7 @@ class TestReportCodeReviewResult(TestCase):
 
     def test_returns_not_found_when_no_match(self) -> None:
         result = report_code_review_result(
-            github_delivery_id="does-not-exist",
+            trigger_id="does-not-exist",
             seer_run_id="seer-run-003",
             status="completed",
             comments_posted=0,
@@ -46,15 +46,15 @@ class TestReportCodeReviewResult(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=self.repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="fail-delivery",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="fail-delivery",
             pr_number=10,
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
         report_code_review_result(
-            github_delivery_id="fail-delivery",
+            trigger_id="fail-delivery",
             seer_run_id="seer-run-004",
             status="failed",
             comments_posted=0,
@@ -69,15 +69,15 @@ class TestReportCodeReviewResult(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=self.repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="started-delivery",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="started-delivery",
             pr_number=11,
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
         report_code_review_result(
-            github_delivery_id="started-delivery",
+            trigger_id="started-delivery",
             seer_run_id="seer-run-005",
             status="started",
             comments_posted=0,
@@ -92,15 +92,15 @@ class TestReportCodeReviewResult(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=self.repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="ts-delivery",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="ts-delivery",
             pr_number=12,
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
         report_code_review_result(
-            github_delivery_id="ts-delivery",
+            trigger_id="ts-delivery",
             seer_run_id="seer-run-006",
             status="completed",
             comments_posted=5,
@@ -116,15 +116,15 @@ class TestReportCodeReviewResult(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=self.repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="bad-ts-delivery",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="bad-ts-delivery",
             pr_number=13,
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
         report_code_review_result(
-            github_delivery_id="bad-ts-delivery",
+            trigger_id="bad-ts-delivery",
             seer_run_id="seer-run-007",
             status="completed",
             comments_posted=0,

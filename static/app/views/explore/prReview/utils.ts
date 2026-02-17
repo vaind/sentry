@@ -21,6 +21,22 @@ export function statusToTagVariant(status: string): TagVariant {
 }
 
 /**
+ * Maps a PR state (open/closed/merged) to a Tag variant.
+ */
+export function prStateToTagVariant(state: string | null): TagVariant {
+  switch (state) {
+    case 'open':
+      return 'success';
+    case 'merged':
+      return 'info';
+    case 'closed':
+      return 'danger';
+    default:
+      return 'muted';
+  }
+}
+
+/**
  * Converts a snake_case status string to Title Case for display.
  */
 export function formatStatus(status: string): string {

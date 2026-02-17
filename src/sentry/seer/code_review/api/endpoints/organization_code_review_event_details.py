@@ -80,6 +80,7 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
                 "prTitle": latest_event.pr_title,
                 "prAuthor": latest_event.pr_author,
                 "prUrl": latest_event.pr_url,
+                "prState": latest_event.pr_state,
                 "events": serialize(list(events), request.user, CodeReviewEventSerializer()),
                 "comments": comments,
                 "commentsError": comments_error,

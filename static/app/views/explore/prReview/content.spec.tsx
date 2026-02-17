@@ -15,7 +15,7 @@ describe('PrReviewContent', () => {
 
   it('renders the page title and header', async () => {
     MockApiClient.addMockResponse({
-      url: `/organizations/${organization.slug}/code-review-events/`,
+      url: `/organizations/${organization.slug}/code-review-prs/`,
       body: [],
     });
     MockApiClient.addMockResponse({
@@ -38,37 +38,22 @@ describe('PrReviewContent', () => {
     expect(await screen.findByText('PR Reviews')).toBeInTheDocument();
   });
 
-  it('renders events from the API', async () => {
+  it('renders PRs from the API', async () => {
     MockApiClient.addMockResponse({
-      url: `/organizations/${organization.slug}/code-review-events/`,
+      url: `/organizations/${organization.slug}/code-review-prs/`,
       body: [
         {
-          id: '1',
-          organizationId: '1',
           repositoryId: '10',
           repositoryName: 'owner/repo',
           prNumber: 42,
           prTitle: 'Fix the bug',
           prAuthor: 'testuser',
           prUrl: 'https://github.com/owner/repo/pull/42',
-          githubEventType: 'pull_request',
-          githubEventAction: 'opened',
-          githubDeliveryId: 'abc-123',
-          trigger: 'on_ready_for_review',
-          triggerUser: null,
-          triggerAt: null,
-          targetCommitSha: null,
-          status: 'review_completed',
-          denialReason: null,
-          dateAdded: '2026-01-15T10:00:00Z',
-          webhookReceivedAt: null,
-          preflightCompletedAt: null,
-          taskEnqueuedAt: null,
-          sentToSeerAt: null,
-          reviewStartedAt: null,
-          reviewCompletedAt: null,
-          seerRunId: null,
-          commentsPosted: 3,
+          latestStatus: 'review_completed',
+          latestTrigger: 'on_ready_for_review',
+          eventCount: 2,
+          totalComments: 3,
+          lastActivity: '2026-01-15T10:00:00Z',
         },
       ],
     });
@@ -94,9 +79,9 @@ describe('PrReviewContent', () => {
     expect(screen.getByText('owner/repo')).toBeInTheDocument();
   });
 
-  it('renders empty state when no events', async () => {
+  it('renders empty state when no PRs', async () => {
     MockApiClient.addMockResponse({
-      url: `/organizations/${organization.slug}/code-review-events/`,
+      url: `/organizations/${organization.slug}/code-review-prs/`,
       body: [],
     });
     MockApiClient.addMockResponse({
@@ -116,12 +101,12 @@ describe('PrReviewContent', () => {
 
     render(<PrReviewContent />, {organization});
 
-    expect(await screen.findByText('No code review events found.')).toBeInTheDocument();
+    expect(await screen.findByText('No pull requests found.')).toBeInTheDocument();
   });
 
   it('renders stats cards', async () => {
     MockApiClient.addMockResponse({
-      url: `/organizations/${organization.slug}/code-review-events/`,
+      url: `/organizations/${organization.slug}/code-review-prs/`,
       body: [],
     });
     MockApiClient.addMockResponse({

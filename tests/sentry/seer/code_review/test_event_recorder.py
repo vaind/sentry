@@ -1,7 +1,7 @@
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.seer.code_review.event_recorder import (
     create_event_record,
-    find_event_by_delivery_id,
+    find_event_by_trigger_id,
     update_event_status,
 )
 from sentry.testutils.cases import TestCase
@@ -22,9 +22,9 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="abc-123",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="abc-123",
             event=event_payload,
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
@@ -36,9 +36,9 @@ class TestCreateEventRecord(TestCase):
         assert record.pr_title == "Fix the bug"
         assert record.pr_author == "testuser"
         assert record.pr_url == "https://github.com/owner/repo/pull/42"
-        assert record.github_event_type == "pull_request"
-        assert record.github_event_action == "opened"
-        assert record.github_delivery_id == "abc-123"
+        assert record.trigger_event_type == "pull_request"
+        assert record.trigger_event_action == "opened"
+        assert record.trigger_id == "abc-123"
         assert record.status == CodeReviewEventStatus.WEBHOOK_RECEIVED
         assert record.webhook_received_at is not None
 
@@ -58,9 +58,9 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="issue_comment",
-            github_event_action="created",
-            github_delivery_id="def-456",
+            trigger_event_type="issue_comment",
+            trigger_event_action="created",
+            trigger_id="def-456",
             event=event_payload,
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
@@ -76,9 +76,9 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="ghi-789",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="ghi-789",
             event={"pull_request": {}},
             status=CodeReviewEventStatus.PREFLIGHT_DENIED,
             denial_reason="Feature not enabled",
@@ -95,9 +95,9 @@ class TestCreateEventRecord(TestCase):
         create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="duplicate-id",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="duplicate-id",
             event={"pull_request": {}},
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
@@ -105,9 +105,9 @@ class TestCreateEventRecord(TestCase):
         result = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="duplicate-id",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="duplicate-id",
             event={"pull_request": {}},
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
@@ -120,15 +120,15 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id=None,
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id=None,
             event={"pull_request": {}},
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
 
         assert record is not None
-        assert record.github_delivery_id is None
+        assert record.trigger_id is None
 
 
 class TestUpdateEventStatus(TestCase):
@@ -137,8 +137,8 @@ class TestUpdateEventStatus(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
 
@@ -153,8 +153,8 @@ class TestUpdateEventStatus(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
 
@@ -179,22 +179,22 @@ class TestFindEventByDeliveryId(TestCase):
         record = CodeReviewEvent.objects.create(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            github_delivery_id="find-me-123",
+            trigger_event_type="pull_request",
+            trigger_event_action="opened",
+            trigger_id="find-me-123",
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
 
-        found = find_event_by_delivery_id("find-me-123")
+        found = find_event_by_trigger_id("find-me-123")
         assert found is not None
         assert found.id == record.id
 
     def test_returns_none_for_nonexistent(self) -> None:
-        result = find_event_by_delivery_id("does-not-exist")
+        result = find_event_by_trigger_id("does-not-exist")
         assert result is None
 
     def test_returns_none_for_empty_string(self) -> None:
-        result = find_event_by_delivery_id("")
+        result = find_event_by_trigger_id("")
         assert result is None
 
 
@@ -215,9 +215,9 @@ class TestStatusToTimestampMapping(TestCase):
             record = create_event_record(
                 organization_id=self.organization.id,
                 repository_id=repo.id,
-                github_event_type="pull_request",
-                github_event_action="opened",
-                github_delivery_id=None,
+                trigger_event_type="pull_request",
+                trigger_event_action="opened",
+                trigger_id=None,
                 event={"pull_request": {}},
                 status=status,
             )

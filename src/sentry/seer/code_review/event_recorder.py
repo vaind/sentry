@@ -15,8 +15,18 @@ from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStat
 logger = logging.getLogger(__name__)
 
 
+def _extract_pr_state(pr: Mapping[str, Any]) -> str | None:
+    """Derive PR state from GitHub's state + merged fields."""
+    if pr.get("merged"):
+        return "merged"
+    state = pr.get("state")
+    if state in ("open", "closed"):
+        return state
+    return None
+
+
 def _extract_pr_metadata(
-    github_event_type: str,
+    trigger_event_type: str,
     event: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Extract PR metadata from a webhook payload based on event type."""
@@ -24,25 +34,29 @@ def _extract_pr_metadata(
     pr_title = None
     pr_author = None
     pr_url = None
+    pr_state = None
 
-    if github_event_type == "pull_request":
+    if trigger_event_type == "pull_request":
         pr = event.get("pull_request", {})
         pr_number = pr.get("number")
         pr_title = pr.get("title")
         pr_author = pr.get("user", {}).get("login")
         pr_url = pr.get("html_url")
-    elif github_event_type == "issue_comment":
+        pr_state = _extract_pr_state(pr)
+    elif trigger_event_type == "issue_comment":
         issue = event.get("issue", {})
         pr_number = issue.get("number")
         pr_title = issue.get("title")
         pr_author = issue.get("user", {}).get("login")
         pr_url = issue.get("pull_request", {}).get("html_url")
+        pr_state = issue.get("state")
 
     return {
         "pr_number": pr_number,
         "pr_title": pr_title,
         "pr_author": pr_author,
         "pr_url": pr_url,
+        "pr_state": pr_state,
     }
 
 
@@ -50,16 +64,16 @@ def create_event_record(
     *,
     organization_id: int,
     repository_id: int,
-    github_event_type: str,
-    github_event_action: str,
-    github_delivery_id: str | None,
+    trigger_event_type: str,
+    trigger_event_action: str,
+    trigger_id: str | None,
     event: Mapping[str, Any],
     status: str,
     denial_reason: str | None = None,
 ) -> CodeReviewEvent | None:
     """Create a CodeReviewEvent record. Returns None if creation fails."""
     now = datetime.now(timezone.utc)
-    pr_metadata = _extract_pr_metadata(github_event_type, event)
+    pr_metadata = _extract_pr_metadata(trigger_event_type, event)
 
     timestamp_field = _status_to_timestamp_field(status)
     timestamps = {timestamp_field: now} if timestamp_field else {}
@@ -68,9 +82,9 @@ def create_event_record(
         return CodeReviewEvent.objects.create(
             organization_id=organization_id,
             repository_id=repository_id,
-            github_event_type=github_event_type,
-            github_event_action=github_event_action,
-            github_delivery_id=github_delivery_id,
+            trigger_event_type=trigger_event_type,
+            trigger_event_action=trigger_event_action,
+            trigger_id=trigger_id,
             status=status,
             denial_reason=denial_reason,
             **pr_metadata,
@@ -82,7 +96,7 @@ def create_event_record(
             extra={
                 "organization_id": organization_id,
                 "repository_id": repository_id,
-                "github_delivery_id": github_delivery_id,
+                "trigger_id": trigger_id,
             },
         )
         return None
@@ -120,11 +134,11 @@ def update_event_status(
         )
 
 
-def find_event_by_delivery_id(github_delivery_id: str) -> CodeReviewEvent | None:
-    """Find a CodeReviewEvent by github_delivery_id."""
-    if not github_delivery_id:
+def find_event_by_trigger_id(trigger_id: str) -> CodeReviewEvent | None:
+    """Find a CodeReviewEvent by trigger_id."""
+    if not trigger_id:
         return None
-    return CodeReviewEvent.objects.filter(github_delivery_id=github_delivery_id).first()
+    return CodeReviewEvent.objects.filter(trigger_id=trigger_id).first()
 
 
 def _status_to_timestamp_field(status: str) -> str | None:

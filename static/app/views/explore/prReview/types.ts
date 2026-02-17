@@ -2,9 +2,6 @@ export interface CodeReviewEvent {
   commentsPosted: number | null;
   dateAdded: string;
   denialReason: string | null;
-  githubDeliveryId: string | null;
-  githubEventAction: string;
-  githubEventType: string;
   id: string;
   organizationId: string;
   prAuthor: string | null;
@@ -22,6 +19,9 @@ export interface CodeReviewEvent {
   taskEnqueuedAt: string | null;
   trigger: string | null;
   triggerAt: string | null;
+  triggerEventAction: string;
+  triggerEventType: string;
+  triggerId: string | null;
   triggerUser: string | null;
   webhookReceivedAt: string | null;
   preflightCompletedAt?: string | null;
@@ -34,6 +34,7 @@ export interface CodeReviewPR {
   latestTrigger: string | null;
   prAuthor: string | null;
   prNumber: number;
+  prState: string | null;
   prTitle: string | null;
   prUrl: string | null;
   repositoryId: string;
@@ -47,6 +48,7 @@ export interface CodeReviewPRDetails {
   events: CodeReviewEvent[];
   prAuthor: string | null;
   prNumber: number;
+  prState: string | null;
   prTitle: string | null;
   prUrl: string | null;
   repositoryId: string;
