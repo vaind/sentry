@@ -491,6 +491,62 @@ The form system automatically shows:
 - **Checkmark** on success (fades after 2s)
 - **Warning icon** on validation error (with tooltip)
 
+### Confirmation Dialogs
+
+For dangerous operations (security settings, permissions), use the `confirm` prop to show a confirmation modal before saving. The `confirm` prop accepts either a string or a function.
+
+```tsx
+<AutoSaveField
+  name="require2FA"
+  schema={schema}
+  initialValue={false}
+  confirm={value =>
+    value
+      ? 'This will remove all members without 2FA. Continue?'
+      : 'Are you sure you want to allow members without 2FA?'
+  }
+  mutationOptions={{...}}
+>
+  {field => (
+    <field.Layout.Row label="Require Two-Factor Auth">
+      <field.Switch checked={field.state.value} onChange={field.handleChange} />
+    </field.Layout.Row>
+  )}
+</AutoSaveField>
+```
+
+**Confirm Config Options:**
+
+| Type                             | Description                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| `string`                         | Always show this message before saving                                                      |
+| `(value) => string \| undefined` | Function that returns a message based on the new value, or `undefined` to skip confirmation |
+
+> **Note**: Confirmation dialogs always focus the Cancel button for safety, preventing accidental confirmation of dangerous operations.
+
+**Examples:**
+
+```tsx
+// ✅ Simple string - always confirm
+confirm="Are you sure you want to change this setting?"
+
+// ✅ Only confirm when ENABLING (return undefined to skip)
+confirm={value => value ? 'Are you sure you want to enable this?' : undefined}
+
+// ✅ Only confirm when DISABLING
+confirm={value => !value ? 'Disabling this removes security protection.' : undefined}
+
+// ✅ Different messages for each direction
+confirm={value =>
+  value
+    ? 'Enable 2FA requirement for all members?'
+    : 'Allow members without 2FA?'
+}
+
+// ✅ For select fields - confirm specific values
+confirm={value => value === 'delete' ? 'This will permanently delete all data!' : undefined}
+```
+
 ---
 
 ## Form Submission
@@ -522,8 +578,8 @@ function MyForm() {
     ...defaultFormOptions,
     defaultValues: {...},
     validators: {onDynamic: schema},
-    onSubmit: async ({value}) => {
-      await mutation.mutateAsync(value);
+    onSubmit: ({value}) => {
+      return mutation.mutateAsync(value).catch(() => {});
     },
   });
 
@@ -586,13 +642,21 @@ onSubmit: async ({value}) => {
   await api.post('/users', value);
 };
 
-// ✅ Use mutations with fetchMutation
+// ❌ Don't use mutateAsync without .catch() - causes unhandled rejection
+onSubmit: ({value}) => {
+  return mutation.mutateAsync(value);
+};
+
+// ✅ Use mutations with fetchMutation and .catch(() => {})
 const mutation = useMutation({
   mutationFn: data => fetchMutation({url: '/users/', method: 'POST', data}),
 });
 
-onSubmit: async ({value}) => {
-  await mutation.mutateAsync(value);
+onSubmit: ({value}) => {
+  // Return the promise to keep form.isSubmitting working
+  // Add .catch(() => {}) to avoid unhandled rejection - error handling
+  // is done by TanStack Query (onError callback, mutation.isError state)
+  return mutation.mutateAsync(value).catch(() => {});
 };
 ```
 
