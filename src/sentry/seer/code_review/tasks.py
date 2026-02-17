@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from sentry.models.code_review_event import CodeReviewEvent
 from sentry.silo.base import SiloMode
 from sentry.tasks.base import instrumented_task
 from sentry.taskworker.namespaces import seer_code_review_tasks
@@ -21,7 +22,6 @@ RETENTION_DAYS = 90
 )
 def cleanup_old_code_review_events() -> None:
     """Delete CodeReviewEvent records older than 90 days."""
-    from sentry.models.code_review_event import CodeReviewEvent
 
     cutoff = timezone.now() - timedelta(days=RETENTION_DAYS)
     deleted_count, _ = CodeReviewEvent.objects.filter(date_added__lt=cutoff).delete()

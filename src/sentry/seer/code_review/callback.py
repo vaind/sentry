@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
+from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +25,6 @@ def report_code_review_result(
     Called by Seer after completing (or failing) a code review.
     Updates the corresponding CodeReviewEvent record.
     """
-    from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 
     # Find the matching event record
     event_record = None

@@ -1,4 +1,5 @@
 from django.urls import reverse
+from rest_framework.test import APIClient
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.testutils.cases import APITestCase
@@ -109,9 +110,6 @@ class OrganizationCodeReviewEventsTest(APITestCase):
         assert response.data[0]["repositoryName"] == "owner/repo"
 
     def test_unauthenticated_returns_401(self) -> None:
-        # Use a fresh client that has not been authenticated
-        from rest_framework.test import APIClient
-
         anon_client = APIClient()
         with self.feature("organizations:pr-review-dashboard"):
             url = reverse(self.endpoint, args=[self.organization.slug])

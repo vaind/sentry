@@ -19,7 +19,7 @@ from sentry.seer.code_review.rpc_queries import get_pr_comments
 
 @region_silo_endpoint
 class OrganizationCodeReviewEventDetailsEndpoint(OrganizationEndpoint):
-    owner = ApiOwner.ML_AI
+    owner = ApiOwner.CODING_WORKFLOWS
     publish_status = {
         "GET": ApiPublishStatus.EXPERIMENTAL,
     }

@@ -16,7 +16,7 @@ from sentry.seer.code_review.api.serializers.code_review_event import CodeReview
 
 @region_silo_endpoint
 class OrganizationCodeReviewEventsEndpoint(OrganizationEndpoint):
-    owner = ApiOwner.ML_AI
+    owner = ApiOwner.CODING_WORKFLOWS
     publish_status = {
         "GET": ApiPublishStatus.EXPERIMENTAL,
     }

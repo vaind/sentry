@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.urls import reverse
+from django.utils import timezone
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.testutils.cases import APITestCase
@@ -118,8 +119,6 @@ class OrganizationCodeReviewEventDetailsTest(APITestCase):
     )
     def test_includes_timeline(self, mock_get_comments) -> None:
         mock_get_comments.return_value = []
-        from django.utils import timezone
-
         now = timezone.now()
         event = self._create_event(
             webhook_received_at=now,
