@@ -17,6 +17,28 @@ from sentry.seer.code_review.api.serializers.code_review_event import (
 from sentry.seer.code_review.rpc_queries import get_pr_comments
 
 
+def _fetch_pr_comments(event: CodeReviewEvent) -> tuple[list[dict], bool]:
+    """Fetch PR comments from Seer. Returns (comments, has_error)."""
+    if not event.pr_number:
+        return [], False
+
+    try:
+        repo = Repository.objects.get(id=event.repository_id)
+    except Repository.DoesNotExist:
+        return [], True
+
+    repo_name_parts = repo.name.split("/", 1)
+    if len(repo_name_parts) != 2:
+        return [], False
+
+    owner, repo_name = repo_name_parts
+    comments = get_pr_comments("github", owner, repo_name, event.pr_number)
+    if comments is None:
+        return [], True
+
+    return comments, False
+
+
 @region_silo_endpoint
 class OrganizationCodeReviewEventDetailsEndpoint(OrganizationEndpoint):
     owner = ApiOwner.CODING_WORKFLOWS
@@ -38,21 +60,8 @@ class OrganizationCodeReviewEventDetailsEndpoint(OrganizationEndpoint):
 
         result = serialize(event, request.user, DetailedCodeReviewEventSerializer())
 
-        comments_error = False
-        comments = None
-        if event.pr_number:
-            try:
-                repo = Repository.objects.get(id=event.repository_id)
-                repo_name_parts = repo.name.split("/", 1)
-                if len(repo_name_parts) == 2:
-                    owner, repo_name = repo_name_parts
-                    comments = get_pr_comments("github", owner, repo_name, event.pr_number)
-                    if comments is None:
-                        comments_error = True
-            except Repository.DoesNotExist:
-                comments_error = True
-
-        result["comments"] = comments or []
+        comments, comments_error = _fetch_pr_comments(event)
+        result["comments"] = comments
         result["commentsError"] = comments_error
 
         return Response(result)

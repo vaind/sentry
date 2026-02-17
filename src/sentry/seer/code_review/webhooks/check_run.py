@@ -8,14 +8,13 @@ a task to forward the original run ID to Seer so it can rerun the PR review.
 
 from __future__ import annotations
 
-import enum
 import logging
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError  # noqa: F401
+from pydantic import BaseModel, Field, ValidationError
 
 from sentry.integrations.github.webhook_types import GithubWebhookType
 
@@ -32,7 +31,7 @@ from ..metrics import (
 logger = logging.getLogger(__name__)
 
 
-class Log(enum.StrEnum):
+class Log(StrEnum):
     MISSING_ACTION = "github.webhook.check_run.missing-action"
     INVALID_PAYLOAD = "github.webhook.check_run.invalid-payload"
 
@@ -76,15 +75,8 @@ def handle_check_run_event(
     **kwargs: Any,
 ) -> None:
     """
-    This is called when a check_run event is received from GitHub.
-    When a user clicks "Re-run" on a check run in GitHub UI, we enqueue
-    a task to forward the original run ID to Seer so it can rerun the PR review.
-
-    Args:
-        github_event: The GitHub webhook event type from X-GitHub-Event header (e.g., "check_run")
-        event: The webhook event payload
-        organization: The Sentry organization that the webhook event belongs to
-        **kwargs: Additional keyword arguments
+    Handle check_run webhook events. When a user clicks "Re-run" on a check run
+    in GitHub UI, enqueue a task to forward the original run ID to Seer.
     """
     if github_event != GithubWebhookType.CHECK_RUN:
         return

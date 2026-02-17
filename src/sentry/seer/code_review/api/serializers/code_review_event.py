@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import MutableMapping, Sequence
+from datetime import datetime
 from typing import Any, TypedDict
 
 from sentry.api.serializers import Serializer, register
 from sentry.models.code_review_event import CodeReviewEvent
 from sentry.models.repository import Repository
+
+
+def _iso_or_none(dt: datetime | None) -> str | None:
+    return dt.isoformat() if dt else None
 
 
 class CodeReviewEventResponse(TypedDict):
@@ -47,7 +52,6 @@ class CodeReviewEventSerializer(Serializer):
     def get_attrs(
         self, item_list: Sequence[CodeReviewEvent], user: Any, **kwargs: Any
     ) -> MutableMapping[CodeReviewEvent, MutableMapping[str, Any]]:
-        # Bulk-fetch repositories to avoid N+1
         repo_ids = {item.repository_id for item in item_list}
         repos = {r.id: r for r in Repository.objects.filter(id__in=repo_ids)}
 
@@ -75,25 +79,17 @@ class CodeReviewEventSerializer(Serializer):
             "githubDeliveryId": obj.github_delivery_id,
             "trigger": obj.trigger,
             "triggerUser": obj.trigger_user,
-            "triggerAt": obj.trigger_at.isoformat() if obj.trigger_at else None,
+            "triggerAt": _iso_or_none(obj.trigger_at),
             "targetCommitSha": obj.target_commit_sha,
             "status": obj.status,
             "denialReason": obj.denial_reason,
             "dateAdded": obj.date_added.isoformat(),
-            "webhookReceivedAt": (
-                obj.webhook_received_at.isoformat() if obj.webhook_received_at else None
-            ),
-            "preflightCompletedAt": (
-                obj.preflight_completed_at.isoformat() if obj.preflight_completed_at else None
-            ),
-            "taskEnqueuedAt": (obj.task_enqueued_at.isoformat() if obj.task_enqueued_at else None),
-            "sentToSeerAt": obj.sent_to_seer_at.isoformat() if obj.sent_to_seer_at else None,
-            "reviewStartedAt": (
-                obj.review_started_at.isoformat() if obj.review_started_at else None
-            ),
-            "reviewCompletedAt": (
-                obj.review_completed_at.isoformat() if obj.review_completed_at else None
-            ),
+            "webhookReceivedAt": _iso_or_none(obj.webhook_received_at),
+            "preflightCompletedAt": _iso_or_none(obj.preflight_completed_at),
+            "taskEnqueuedAt": _iso_or_none(obj.task_enqueued_at),
+            "sentToSeerAt": _iso_or_none(obj.sent_to_seer_at),
+            "reviewStartedAt": _iso_or_none(obj.review_started_at),
+            "reviewCompletedAt": _iso_or_none(obj.review_completed_at),
             "seerRunId": obj.seer_run_id,
             "commentsPosted": obj.comments_posted,
         }

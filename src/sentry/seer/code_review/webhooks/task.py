@@ -33,7 +33,6 @@ PREFIX = "seer.code_review.task"
 MAX_RETRIES = 5
 DELAY_BETWEEN_RETRIES = 60  # 1 minute
 RETRYABLE_ERRORS = (HTTPError,)
-METRICS_PREFIX = "seer.code_review.task"
 
 
 def schedule_task(
@@ -46,8 +45,6 @@ def schedule_task(
     event_record: Any | None = None,
 ) -> None:
     """Transform and forward a webhook event to Seer for processing."""
-    from .task import process_github_webhook_event
-
     transformed_event = transform_webhook_to_codegen_request(
         github_event=github_event,
         github_event_action=github_event_action,

@@ -2,10 +2,27 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from typing import Any
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 
 logger = logging.getLogger(__name__)
+
+SEER_STATUS_MAP: dict[str, CodeReviewEventStatus] = {
+    "completed": CodeReviewEventStatus.REVIEW_COMPLETED,
+    "failed": CodeReviewEventStatus.REVIEW_FAILED,
+    "started": CodeReviewEventStatus.REVIEW_STARTED,
+}
+
+
+def _parse_timestamp(value: str | None) -> datetime | None:
+    """Parse an ISO timestamp string, returning None on invalid input."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
 
 
 def report_code_review_result(
@@ -36,42 +53,22 @@ def report_code_review_result(
         )
         return {"status": "not_found"}
 
-    # Parse timestamps
-    review_started_at = None
-    if started_at:
-        try:
-            review_started_at = datetime.fromisoformat(started_at)
-        except (ValueError, TypeError):
-            pass
+    new_status = SEER_STATUS_MAP.get(status, CodeReviewEventStatus.REVIEW_COMPLETED)
 
-    review_completed_at = None
-    if completed_at:
-        try:
-            review_completed_at = datetime.fromisoformat(completed_at)
-        except (ValueError, TypeError):
-            pass
-
-    # Map Seer status to our pipeline status
-    if status == "completed":
-        new_status = CodeReviewEventStatus.REVIEW_COMPLETED
-    elif status == "failed":
-        new_status = CodeReviewEventStatus.REVIEW_FAILED
-    elif status == "started":
-        new_status = CodeReviewEventStatus.REVIEW_STARTED
-    else:
-        new_status = CodeReviewEventStatus.REVIEW_COMPLETED
-
-    # Build update fields
-    update_fields = {
+    update_fields: dict[str, Any] = {
         "status": new_status,
         "seer_run_id": seer_run_id,
         "comments_posted": comments_posted,
     }
 
+    review_started_at = _parse_timestamp(started_at)
     if review_started_at:
         update_fields["review_started_at"] = review_started_at
+
+    review_completed_at = _parse_timestamp(completed_at)
     if review_completed_at:
         update_fields["review_completed_at"] = review_completed_at
+
     if error_message:
         update_fields["review_result"] = {"error_message": error_message}
 

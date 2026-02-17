@@ -1,5 +1,3 @@
-import {Fragment} from 'react';
-
 import {Tag} from '@sentry/scraps/badge';
 import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
@@ -16,27 +14,7 @@ import {useParams} from 'sentry/utils/useParams';
 import ExploreBreadcrumb from 'sentry/views/explore/components/breadcrumb';
 import {PrReviewTimeline} from 'sentry/views/explore/prReview/prReviewTimeline';
 import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
-
-function statusToTagType(status: string): React.ComponentProps<typeof Tag>['type'] {
-  switch (status) {
-    case 'review_completed':
-      return 'success';
-    case 'review_failed':
-      return 'error';
-    case 'preflight_denied':
-    case 'webhook_filtered':
-      return 'warning';
-    case 'sent_to_seer':
-    case 'review_started':
-      return 'info';
-    default:
-      return 'default';
-  }
-}
-
-function formatStatus(status: string): string {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
+import {formatStatus, statusToTagType} from 'sentry/views/explore/prReview/utils';
 
 export default function PrReviewDetail() {
   const organization = useOrganization();
@@ -176,7 +154,7 @@ function DetailRow({label, children}: {children: React.ReactNode; label: string}
       <Text bold size="sm" style={{minWidth: 140}}>
         {label}
       </Text>
-      <Fragment>{children}</Fragment>
+      {children}
     </Flex>
   );
 }

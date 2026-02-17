@@ -10,32 +10,12 @@ import {PanelTable} from 'sentry/components/panels/panelTable';
 import {t} from 'sentry/locale';
 import useOrganization from 'sentry/utils/useOrganization';
 import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
+import {formatStatus, statusToTagType} from 'sentry/views/explore/prReview/utils';
 
 interface Props {
   events: CodeReviewEvent[] | undefined;
   isLoading: boolean;
   pageLinks: string | null;
-}
-
-function statusToTagType(status: string): React.ComponentProps<typeof Tag>['type'] {
-  switch (status) {
-    case 'review_completed':
-      return 'success';
-    case 'review_failed':
-      return 'error';
-    case 'preflight_denied':
-    case 'webhook_filtered':
-      return 'warning';
-    case 'sent_to_seer':
-    case 'review_started':
-      return 'info';
-    default:
-      return 'default';
-  }
-}
-
-function formatStatus(status: string): string {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export function PrReviewList({events, isLoading, pageLinks}: Props) {
