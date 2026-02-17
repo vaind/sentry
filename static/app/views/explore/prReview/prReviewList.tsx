@@ -7,6 +7,7 @@ import {DateTime} from 'sentry/components/dateTime';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Pagination from 'sentry/components/pagination';
 import {PanelTable} from 'sentry/components/panels/panelTable';
+import {IconOpen} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import useOrganization from 'sentry/utils/useOrganization';
 import type {CodeReviewPR} from 'sentry/views/explore/prReview/types';
@@ -30,7 +31,8 @@ export function PrReviewList({prs, isLoading, pageLinks}: Props) {
       <PanelTable
         headers={[
           t('Repository'),
-          t('PR'),
+          t('PR #'),
+          t('Title'),
           t('Author'),
           t('Status'),
           t('Reviews'),
@@ -44,18 +46,20 @@ export function PrReviewList({prs, isLoading, pageLinks}: Props) {
           <Fragment key={`${pr.repositoryId}-${pr.prNumber}`}>
             <div>{pr.repositoryName ?? pr.repositoryId}</div>
             <div>
+              {pr.prUrl ? (
+                <ExternalLink href={pr.prUrl}>
+                  #{pr.prNumber} <IconOpen size="xs" />
+                </ExternalLink>
+              ) : (
+                `#${pr.prNumber}`
+              )}
+            </div>
+            <div>
               <Link
                 to={`/organizations/${organization.slug}/explore/pr-review/${pr.repositoryId}/${pr.prNumber}/`}
               >
-                #{pr.prNumber}
-                {pr.prTitle ? ` ${pr.prTitle}` : ''}
+                {pr.prTitle ?? t('View details')}
               </Link>
-              {pr.prUrl ? (
-                <Fragment>
-                  {' '}
-                  <ExternalLink href={pr.prUrl}>{t('GitHub')}</ExternalLink>
-                </Fragment>
-              ) : null}
             </div>
             <div>{pr.prAuthor ?? '—'}</div>
             <div>
