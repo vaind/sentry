@@ -42,11 +42,6 @@ class CodeReviewEventResponse(TypedDict):
     commentsPosted: int | None
 
 
-class DetailedCodeReviewEventResponse(CodeReviewEventResponse):
-    reviewResult: dict | None
-    timeline: list[dict]
-
-
 @register(CodeReviewEvent)
 class CodeReviewEventSerializer(Serializer):
     def get_attrs(
@@ -92,35 +87,4 @@ class CodeReviewEventSerializer(Serializer):
             "reviewCompletedAt": _iso_or_none(obj.review_completed_at),
             "seerRunId": obj.seer_run_id,
             "commentsPosted": obj.comments_posted,
-        }
-
-
-class DetailedCodeReviewEventSerializer(CodeReviewEventSerializer):
-    def serialize(
-        self,
-        obj: CodeReviewEvent,
-        attrs: MutableMapping[str, Any],
-        user: Any,
-        **kwargs: Any,
-    ) -> DetailedCodeReviewEventResponse:
-        base = super().serialize(obj, attrs, user, **kwargs)
-
-        # Build timeline from timestamps
-        timeline = []
-        timestamp_stages = [
-            ("webhook_received", obj.webhook_received_at),
-            ("preflight_completed", obj.preflight_completed_at),
-            ("task_enqueued", obj.task_enqueued_at),
-            ("sent_to_seer", obj.sent_to_seer_at),
-            ("review_started", obj.review_started_at),
-            ("review_completed", obj.review_completed_at),
-        ]
-        for stage, ts in timestamp_stages:
-            if ts:
-                timeline.append({"stage": stage, "timestamp": ts.isoformat()})
-
-        return {
-            **base,
-            "reviewResult": obj.review_result,
-            "timeline": timeline,
         }

@@ -24,17 +24,33 @@ export interface CodeReviewEvent {
   triggerAt: string | null;
   triggerUser: string | null;
   webhookReceivedAt: string | null;
-  // Detail-only fields
-  comments?: CodeReviewComment[];
-  commentsError?: boolean;
   preflightCompletedAt?: string | null;
-  reviewResult?: Record<string, unknown> | null;
-  timeline?: TimelineEntry[];
 }
 
-export interface TimelineEntry {
-  stage: string;
-  timestamp: string;
+export interface CodeReviewPR {
+  eventCount: number;
+  lastActivity: string;
+  latestStatus: string;
+  latestTrigger: string | null;
+  prAuthor: string | null;
+  prNumber: number;
+  prTitle: string | null;
+  prUrl: string | null;
+  repositoryId: string;
+  repositoryName: string | null;
+  totalComments: number;
+}
+
+export interface CodeReviewPRDetails {
+  comments: CodeReviewComment[];
+  commentsError: boolean;
+  events: CodeReviewEvent[];
+  prAuthor: string | null;
+  prNumber: number;
+  prTitle: string | null;
+  prUrl: string | null;
+  repositoryId: string;
+  repositoryName: string | null;
 }
 
 export interface CodeReviewComment {

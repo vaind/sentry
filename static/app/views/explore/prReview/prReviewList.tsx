@@ -9,16 +9,16 @@ import Pagination from 'sentry/components/pagination';
 import {PanelTable} from 'sentry/components/panels/panelTable';
 import {t} from 'sentry/locale';
 import useOrganization from 'sentry/utils/useOrganization';
-import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
+import type {CodeReviewPR} from 'sentry/views/explore/prReview/types';
 import {formatStatus, statusToTagVariant} from 'sentry/views/explore/prReview/utils';
 
 interface Props {
-  events: CodeReviewEvent[] | undefined;
   isLoading: boolean;
   pageLinks: string | null;
+  prs: CodeReviewPR[] | undefined;
 }
 
-export function PrReviewList({events, isLoading, pageLinks}: Props) {
+export function PrReviewList({prs, isLoading, pageLinks}: Props) {
   const organization = useOrganization();
 
   if (isLoading) {
@@ -31,39 +31,43 @@ export function PrReviewList({events, isLoading, pageLinks}: Props) {
         headers={[
           t('Repository'),
           t('PR'),
-          t('Trigger'),
+          t('Author'),
           t('Status'),
-          t('Time'),
+          t('Reviews'),
           t('Comments'),
+          t('Last Activity'),
         ]}
-        isEmpty={!events || events.length === 0}
-        emptyMessage={t('No code review events found.')}
+        isEmpty={!prs || prs.length === 0}
+        emptyMessage={t('No pull requests found.')}
       >
-        {events?.map(event => (
-          <Fragment key={event.id}>
-            <div>{event.repositoryName ?? event.repositoryId}</div>
+        {prs?.map(pr => (
+          <Fragment key={`${pr.repositoryId}-${pr.prNumber}`}>
+            <div>{pr.repositoryName ?? pr.repositoryId}</div>
             <div>
-              {event.prUrl ? (
-                <ExternalLink href={event.prUrl}>#{event.prNumber}</ExternalLink>
-              ) : (
-                `#${event.prNumber ?? '—'}`
-              )}{' '}
               <Link
-                to={`/organizations/${organization.slug}/explore/pr-review/${event.id}/`}
+                to={`/organizations/${organization.slug}/explore/pr-review/${pr.repositoryId}/${pr.prNumber}/`}
               >
-                {event.prTitle ?? t('View details')}
+                #{pr.prNumber}
+                {pr.prTitle ? ` ${pr.prTitle}` : ''}
               </Link>
+              {pr.prUrl ? (
+                <Fragment>
+                  {' '}
+                  <ExternalLink href={pr.prUrl}>{t('GitHub')}</ExternalLink>
+                </Fragment>
+              ) : null}
             </div>
-            <div>{event.trigger ? formatStatus(event.trigger) : '—'}</div>
+            <div>{pr.prAuthor ?? '—'}</div>
             <div>
-              <Tag variant={statusToTagVariant(event.status)}>
-                {formatStatus(event.status)}
+              <Tag variant={statusToTagVariant(pr.latestStatus)}>
+                {formatStatus(pr.latestStatus)}
               </Tag>
             </div>
+            <div>{pr.eventCount}</div>
+            <div>{pr.totalComments}</div>
             <div>
-              <DateTime date={event.triggerAt ?? event.dateAdded} />
+              <DateTime date={pr.lastActivity} />
             </div>
-            <div>{event.commentsPosted ?? '—'}</div>
           </Fragment>
         ))}
       </PanelTable>

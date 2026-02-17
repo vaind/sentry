@@ -1,6 +1,7 @@
 import {useState} from 'react';
 
 import * as Layout from 'sentry/components/layouts/thirds';
+import {PageHeadingQuestionTooltip} from 'sentry/components/pageHeadingQuestionTooltip';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
 import {useApiQuery} from 'sentry/utils/queryClient';
@@ -9,7 +10,7 @@ import {PrReviewFilters} from 'sentry/views/explore/prReview/prReviewFilters';
 import {PrReviewList} from 'sentry/views/explore/prReview/prReviewList';
 import {PrReviewStats} from 'sentry/views/explore/prReview/prReviewStats';
 import type {
-  CodeReviewEvent,
+  CodeReviewPR,
   CodeReviewStats as CodeReviewStatsType,
 } from 'sentry/views/explore/prReview/types';
 
@@ -27,11 +28,11 @@ export default function PrReviewContent() {
   }
 
   const {
-    data: events,
+    data: prs,
     isLoading,
     getResponseHeader,
-  } = useApiQuery<CodeReviewEvent[]>(
-    [`/organizations/${organization.slug}/code-review-events/`, {query: queryParams}],
+  } = useApiQuery<CodeReviewPR[]>(
+    [`/organizations/${organization.slug}/code-review-prs/`, {query: queryParams}],
     {staleTime: 30_000}
   );
 
@@ -45,9 +46,15 @@ export default function PrReviewContent() {
   return (
     <SentryDocumentTitle title={t('PR Reviews')} orgSlug={organization.slug}>
       <Layout.Page>
-        <Layout.Header>
+        <Layout.Header unified>
           <Layout.HeaderContent>
-            <Layout.Title>{t('PR Reviews')}</Layout.Title>
+            <Layout.Title>
+              {t('PR Reviews')}
+              <PageHeadingQuestionTooltip
+                docsUrl="https://docs.sentry.io/product/explore/pr-reviews/"
+                title={t('Monitor automated code reviews on your pull requests.')}
+              />
+            </Layout.Title>
           </Layout.HeaderContent>
         </Layout.Header>
         <Layout.Body>
@@ -59,7 +66,7 @@ export default function PrReviewContent() {
               onStatusChange={setStatus}
               onTriggerTypeChange={setTriggerType}
             />
-            <PrReviewList events={events} isLoading={isLoading} pageLinks={pageLinks} />
+            <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
           </Layout.Main>
         </Layout.Body>
       </Layout.Page>

@@ -1,3 +1,5 @@
+import {Fragment} from 'react';
+
 import {Tag} from '@sentry/scraps/badge';
 import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
@@ -6,21 +8,21 @@ import {Heading, Text} from '@sentry/scraps/text';
 import {DateTime} from 'sentry/components/dateTime';
 import * as Layout from 'sentry/components/layouts/thirds';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {PanelTable} from 'sentry/components/panels/panelTable';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
 import {useApiQuery} from 'sentry/utils/queryClient';
 import useOrganization from 'sentry/utils/useOrganization';
 import {useParams} from 'sentry/utils/useParams';
-import {PrReviewTimeline} from 'sentry/views/explore/prReview/prReviewTimeline';
-import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
+import type {CodeReviewPRDetails} from 'sentry/views/explore/prReview/types';
 import {formatStatus, statusToTagVariant} from 'sentry/views/explore/prReview/utils';
 
 export default function PrReviewDetail() {
   const organization = useOrganization();
-  const {eventId} = useParams<{eventId: string}>();
+  const {repoId, prNumber} = useParams<{prNumber: string; repoId: string}>();
 
-  const {data: event, isLoading} = useApiQuery<CodeReviewEvent>(
-    [`/organizations/${organization.slug}/code-review-events/${eventId}/`],
+  const {data: pr, isLoading} = useApiQuery<CodeReviewPRDetails>(
+    [`/organizations/${organization.slug}/code-review-prs/${repoId}/${prNumber}/`],
     {staleTime: 30_000}
   );
 
@@ -28,74 +30,67 @@ export default function PrReviewDetail() {
     return <LoadingIndicator />;
   }
 
-  if (!event) {
+  if (!pr) {
     return null;
   }
 
-  const title = event.prTitle
-    ? `PR #${event.prNumber}: ${event.prTitle}`
-    : `PR Review ${eventId}`;
+  const title = pr.prTitle ? `PR #${pr.prNumber}: ${pr.prTitle}` : `PR #${pr.prNumber}`;
 
   return (
     <SentryDocumentTitle title={title} orgSlug={organization.slug}>
       <Layout.Page>
         <Layout.Header>
           <Layout.HeaderContent>
-            <Layout.Title>{title}</Layout.Title>
+            <Layout.Title>
+              {title}
+              {pr.prUrl ? (
+                <Fragment>
+                  {' '}
+                  <ExternalLink href={pr.prUrl}>{t('View on GitHub')}</ExternalLink>
+                </Fragment>
+              ) : null}
+            </Layout.Title>
           </Layout.HeaderContent>
         </Layout.Header>
         <Layout.Body>
-          <Layout.Main>
+          <Layout.Main width="full">
             <Flex direction="column" gap="lg">
               <Flex direction="column" gap="sm">
-                <Heading as="h3">{t('Details')}</Heading>
+                <Heading as="h3">{t('PR Details')}</Heading>
                 <DetailRow label={t('Repository')}>
-                  {event.repositoryName ?? event.repositoryId}
+                  {pr.repositoryName ?? pr.repositoryId}
                 </DetailRow>
-                <DetailRow label={t('PR')}>
-                  {event.prUrl ? (
-                    <ExternalLink href={event.prUrl}>#{event.prNumber}</ExternalLink>
-                  ) : (
-                    `#${event.prNumber ?? '—'}`
-                  )}
-                </DetailRow>
-                <DetailRow label={t('Author')}>{event.prAuthor ?? '—'}</DetailRow>
-                <DetailRow label={t('Status')}>
-                  <Tag variant={statusToTagVariant(event.status)}>
-                    {formatStatus(event.status)}
-                  </Tag>
-                </DetailRow>
-                <DetailRow label={t('Trigger')}>
-                  {event.trigger ? formatStatus(event.trigger) : '—'}
-                </DetailRow>
-                <DetailRow label={t('Triggered by')}>
-                  {event.triggerUser ?? '—'}
-                </DetailRow>
-                <DetailRow label={t('Date')}>
-                  <DateTime date={event.dateAdded} seconds />
-                </DetailRow>
-                <DetailRow label={t('Comments Posted')}>
-                  {event.commentsPosted ?? '—'}
-                </DetailRow>
-                {event.denialReason && (
-                  <DetailRow label={t('Denial Reason')}>{event.denialReason}</DetailRow>
-                )}
-                {event.seerRunId && (
-                  <DetailRow label={t('Seer Run ID')}>{event.seerRunId}</DetailRow>
-                )}
+                <DetailRow label={t('Author')}>{pr.prAuthor ?? '—'}</DetailRow>
               </Flex>
 
-              {event.timeline && event.timeline.length > 0 && (
-                <Flex direction="column" gap="sm">
-                  <Heading as="h3">{t('Timeline')}</Heading>
-                  <PrReviewTimeline timeline={event.timeline} />
-                </Flex>
-              )}
+              <Flex direction="column" gap="sm">
+                <Heading as="h3">{t('Review Events')}</Heading>
+                <PanelTable
+                  headers={[t('Trigger'), t('Status'), t('Time'), t('Comments')]}
+                  isEmpty={pr.events.length === 0}
+                  emptyMessage={t('No review events found.')}
+                >
+                  {pr.events.map(event => (
+                    <Fragment key={event.id}>
+                      <div>{event.trigger ? formatStatus(event.trigger) : '—'}</div>
+                      <div>
+                        <Tag variant={statusToTagVariant(event.status)}>
+                          {formatStatus(event.status)}
+                        </Tag>
+                      </div>
+                      <div>
+                        <DateTime date={event.triggerAt ?? event.dateAdded} seconds />
+                      </div>
+                      <div>{event.commentsPosted ?? '—'}</div>
+                    </Fragment>
+                  ))}
+                </PanelTable>
+              </Flex>
 
-              {event.comments && event.comments.length > 0 && (
+              {pr.comments.length > 0 && (
                 <Flex direction="column" gap="sm">
                   <Heading as="h3">{t('Comments')}</Heading>
-                  {event.comments.map((comment, index) => (
+                  {pr.comments.map((comment, index) => (
                     <Flex key={index} direction="column" gap="xs" padding="md">
                       {comment.file && (
                         <Text size="sm" bold>
@@ -114,32 +109,11 @@ export default function PrReviewDetail() {
                 </Flex>
               )}
 
-              {event.commentsError && (
+              {pr.commentsError && (
                 <Text variant="muted">{t('Unable to load comments from Seer.')}</Text>
               )}
             </Flex>
           </Layout.Main>
-          <Layout.Side>
-            <Flex direction="column" gap="sm">
-              <Heading as="h4">{t('Metadata')}</Heading>
-              <Text variant="muted" size="sm">
-                {t('Event Type')}: {event.githubEventType}
-              </Text>
-              <Text variant="muted" size="sm">
-                {t('Action')}: {event.githubEventAction}
-              </Text>
-              {event.githubDeliveryId && (
-                <Text variant="muted" size="sm">
-                  {t('Delivery ID')}: {event.githubDeliveryId}
-                </Text>
-              )}
-              {event.targetCommitSha && (
-                <Text variant="muted" size="sm">
-                  {t('Commit')}: {event.targetCommitSha.slice(0, 8)}
-                </Text>
-              )}
-            </Flex>
-          </Layout.Side>
         </Layout.Body>
       </Layout.Page>
     </SentryDocumentTitle>

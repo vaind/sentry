@@ -5,8 +5,8 @@ from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStat
 from sentry.testutils.cases import APITestCase
 
 
-class OrganizationCodeReviewEventsTest(APITestCase):
-    endpoint = "sentry-api-0-organization-code-review-events"
+class OrganizationCodeReviewPRsTest(APITestCase):
+    endpoint = "sentry-api-0-organization-code-review-prs"
 
     def setUp(self) -> None:
         super().setUp()
@@ -30,9 +30,10 @@ class OrganizationCodeReviewEventsTest(APITestCase):
         response = self.client.get(url)
         assert response.status_code == 404
 
-    def test_lists_events(self) -> None:
-        self._create_event(pr_number=1)
-        self._create_event(pr_number=2)
+    def test_lists_prs_grouped(self) -> None:
+        self._create_event(pr_number=1, pr_title="First PR")
+        self._create_event(pr_number=1, pr_title="First PR")
+        self._create_event(pr_number=2, pr_title="Second PR")
 
         with self.feature("organizations:pr-review-dashboard"):
             url = reverse(self.endpoint, args=[self.organization.slug])
@@ -40,6 +41,55 @@ class OrganizationCodeReviewEventsTest(APITestCase):
 
         assert response.status_code == 200
         assert len(response.data) == 2
+
+        # Results are ordered by last_activity descending
+        pr_numbers = {row["prNumber"] for row in response.data}
+        assert pr_numbers == {1, 2}
+
+        # PR #1 should have 2 events
+        pr1 = next(row for row in response.data if row["prNumber"] == 1)
+        assert pr1["eventCount"] == 2
+
+        # PR #2 should have 1 event
+        pr2 = next(row for row in response.data if row["prNumber"] == 2)
+        assert pr2["eventCount"] == 1
+
+    def test_aggregates_comments(self) -> None:
+        self._create_event(pr_number=1, comments_posted=3)
+        self._create_event(pr_number=1, comments_posted=2)
+
+        with self.feature("organizations:pr-review-dashboard"):
+            url = reverse(self.endpoint, args=[self.organization.slug])
+            response = self.client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        assert response.data[0]["totalComments"] == 5
+
+    def test_returns_latest_event_metadata(self) -> None:
+        self._create_event(
+            pr_number=1,
+            pr_title="Old title",
+            status=CodeReviewEventStatus.SENT_TO_SEER,
+            trigger="on_ready_for_review",
+        )
+        self._create_event(
+            pr_number=1,
+            pr_title="New title",
+            status=CodeReviewEventStatus.REVIEW_COMPLETED,
+            trigger="on_new_commit",
+        )
+
+        with self.feature("organizations:pr-review-dashboard"):
+            url = reverse(self.endpoint, args=[self.organization.slug])
+            response = self.client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        pr = response.data[0]
+        assert pr["prTitle"] == "New title"
+        assert pr["latestStatus"] == "review_completed"
+        assert pr["latestTrigger"] == "on_new_commit"
 
     def test_filters_by_status(self) -> None:
         self._create_event(pr_number=1, status=CodeReviewEventStatus.REVIEW_COMPLETED)
@@ -51,7 +101,7 @@ class OrganizationCodeReviewEventsTest(APITestCase):
 
         assert response.status_code == 200
         assert len(response.data) == 1
-        assert response.data[0]["status"] == "review_completed"
+        assert response.data[0]["prNumber"] == 1
 
     def test_filters_by_trigger_type(self) -> None:
         self._create_event(pr_number=1, trigger="on_ready_for_review")
@@ -63,6 +113,7 @@ class OrganizationCodeReviewEventsTest(APITestCase):
 
         assert response.status_code == 200
         assert len(response.data) == 1
+        assert response.data[0]["prNumber"] == 1
 
     def test_filters_by_repository_id(self) -> None:
         other_repo = self.create_repo(project=self.project, name="other/repo")
@@ -75,6 +126,7 @@ class OrganizationCodeReviewEventsTest(APITestCase):
 
         assert response.status_code == 200
         assert len(response.data) == 1
+        assert response.data[0]["prNumber"] == 1
 
     def test_does_not_leak_cross_org(self) -> None:
         other_org = self.create_organization(owner=self.create_user())

@@ -516,10 +516,10 @@ from sentry.rules.history.endpoints.project_rule_group_history import (
 )
 from sentry.rules.history.endpoints.project_rule_stats import ProjectRuleStatsIndexEndpoint
 from sentry.seer.code_review.api.endpoints.organization_code_review_event_details import (
-    OrganizationCodeReviewEventDetailsEndpoint,
+    OrganizationCodeReviewPRDetailsEndpoint,
 )
 from sentry.seer.code_review.api.endpoints.organization_code_review_events import (
-    OrganizationCodeReviewEventsEndpoint,
+    OrganizationCodeReviewPRsEndpoint,
 )
 from sentry.seer.code_review.api.endpoints.organization_code_review_stats import (
     OrganizationCodeReviewStatsEndpoint,
@@ -1453,16 +1453,16 @@ ORGANIZATION_URLS: list[URLPattern | URLResolver] = [
         OrganizationCodeMappingCodeOwnersEndpoint.as_view(),
         name="sentry-api-0-organization-code-mapping-codeowners",
     ),
-    # Code Review Events
+    # Code Review PRs
     re_path(
-        r"^(?P<organization_id_or_slug>[^/]+)/code-review-events/$",
-        OrganizationCodeReviewEventsEndpoint.as_view(),
-        name="sentry-api-0-organization-code-review-events",
+        r"^(?P<organization_id_or_slug>[^/]+)/code-review-prs/$",
+        OrganizationCodeReviewPRsEndpoint.as_view(),
+        name="sentry-api-0-organization-code-review-prs",
     ),
     re_path(
-        r"^(?P<organization_id_or_slug>[^/]+)/code-review-events/(?P<event_id>\d+)/$",
-        OrganizationCodeReviewEventDetailsEndpoint.as_view(),
-        name="sentry-api-0-organization-code-review-event-details",
+        r"^(?P<organization_id_or_slug>[^/]+)/code-review-prs/(?P<repo_id>\d+)/(?P<pr_number>\d+)/$",
+        OrganizationCodeReviewPRDetailsEndpoint.as_view(),
+        name="sentry-api-0-organization-code-review-pr-details",
     ),
     re_path(
         r"^(?P<organization_id_or_slug>[^/]+)/code-review-stats/$",

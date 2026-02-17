@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.db.models.functions import Coalesce
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -11,19 +12,14 @@ from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.api.serializers import serialize
 from sentry.models.code_review_event import CodeReviewEvent
 from sentry.models.repository import Repository
-from sentry.seer.code_review.api.serializers.code_review_event import (
-    DetailedCodeReviewEventSerializer,
-)
+from sentry.seer.code_review.api.serializers.code_review_event import CodeReviewEventSerializer
 from sentry.seer.code_review.rpc_queries import get_pr_comments
 
 
-def _fetch_pr_comments(event: CodeReviewEvent) -> tuple[list[dict], bool]:
+def _fetch_pr_comments(repo_id: int, pr_number: int) -> tuple[list[dict], bool]:
     """Fetch PR comments from Seer. Returns (comments, has_error)."""
-    if not event.pr_number:
-        return [], False
-
     try:
-        repo = Repository.objects.get(id=event.repository_id)
+        repo = Repository.objects.get(id=repo_id)
     except Repository.DoesNotExist:
         return [], True
 
@@ -32,7 +28,7 @@ def _fetch_pr_comments(event: CodeReviewEvent) -> tuple[list[dict], bool]:
         return [], False
 
     owner, repo_name = repo_name_parts
-    comments = get_pr_comments("github", owner, repo_name, event.pr_number)
+    comments = get_pr_comments("github", owner, repo_name, pr_number)
     if comments is None:
         return [], True
 
@@ -40,28 +36,52 @@ def _fetch_pr_comments(event: CodeReviewEvent) -> tuple[list[dict], bool]:
 
 
 @region_silo_endpoint
-class OrganizationCodeReviewEventDetailsEndpoint(OrganizationEndpoint):
+class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
     owner = ApiOwner.CODING_WORKFLOWS
     publish_status = {
         "GET": ApiPublishStatus.EXPERIMENTAL,
     }
 
-    def get(self, request: Request, organization, event_id: int) -> Response:
+    def get(self, request: Request, organization, repo_id: str, pr_number: str) -> Response:
         if not features.has("organizations:pr-review-dashboard", organization, actor=request.user):
             return Response(status=404)
 
-        try:
-            event = CodeReviewEvent.objects.get(
-                id=event_id,
+        repo_id_int = int(repo_id)
+        pr_number_int = int(pr_number)
+
+        events = (
+            CodeReviewEvent.objects.filter(
                 organization_id=organization.id,
+                repository_id=repo_id_int,
+                pr_number=pr_number_int,
             )
-        except CodeReviewEvent.DoesNotExist:
+            .annotate(event_time=Coalesce("trigger_at", "date_added"))
+            .order_by("-event_time")
+        )
+
+        if not events.exists():
             return Response(status=404)
 
-        result = serialize(event, request.user, DetailedCodeReviewEventSerializer())
+        latest_event = events[0]
 
-        comments, comments_error = _fetch_pr_comments(event)
-        result["comments"] = comments
-        result["commentsError"] = comments_error
+        try:
+            repo = Repository.objects.get(id=repo_id_int)
+            repo_name = repo.name
+        except Repository.DoesNotExist:
+            repo_name = None
 
-        return Response(result)
+        comments, comments_error = _fetch_pr_comments(repo_id_int, pr_number_int)
+
+        return Response(
+            {
+                "repositoryId": str(repo_id_int),
+                "repositoryName": repo_name,
+                "prNumber": pr_number_int,
+                "prTitle": latest_event.pr_title,
+                "prAuthor": latest_event.pr_author,
+                "prUrl": latest_event.pr_url,
+                "events": serialize(list(events), request.user, CodeReviewEventSerializer()),
+                "comments": comments,
+                "commentsError": comments_error,
+            }
+        )

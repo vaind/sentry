@@ -2352,7 +2352,7 @@ function buildRoutes(): RouteObject[] {
           component: make(() => import('sentry/views/explore/prReview/content')),
         },
         {
-          path: ':eventId/',
+          path: ':repoId/:prNumber/',
           component: make(() => import('sentry/views/explore/prReview/detail')),
         },
       ],
