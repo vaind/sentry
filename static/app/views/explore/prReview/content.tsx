@@ -5,7 +5,6 @@ import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
 import {useApiQuery} from 'sentry/utils/queryClient';
 import useOrganization from 'sentry/utils/useOrganization';
-import ExploreBreadcrumb from 'sentry/views/explore/components/breadcrumb';
 import {PrReviewFilters} from 'sentry/views/explore/prReview/prReviewFilters';
 import {PrReviewList} from 'sentry/views/explore/prReview/prReviewList';
 import {PrReviewStats} from 'sentry/views/explore/prReview/prReviewStats';
@@ -48,12 +47,11 @@ export default function PrReviewContent() {
       <Layout.Page>
         <Layout.Header>
           <Layout.HeaderContent>
-            <ExploreBreadcrumb />
             <Layout.Title>{t('PR Reviews')}</Layout.Title>
           </Layout.HeaderContent>
         </Layout.Header>
         <Layout.Body>
-          <Layout.Main fullWidth>
+          <Layout.Main width="full">
             <PrReviewStats stats={stats?.stats} />
             <PrReviewFilters
               status={status}

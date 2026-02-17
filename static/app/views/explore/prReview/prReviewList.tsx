@@ -10,7 +10,7 @@ import {PanelTable} from 'sentry/components/panels/panelTable';
 import {t} from 'sentry/locale';
 import useOrganization from 'sentry/utils/useOrganization';
 import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
-import {formatStatus, statusToTagType} from 'sentry/views/explore/prReview/utils';
+import {formatStatus, statusToTagVariant} from 'sentry/views/explore/prReview/utils';
 
 interface Props {
   events: CodeReviewEvent[] | undefined;
@@ -56,7 +56,9 @@ export function PrReviewList({events, isLoading, pageLinks}: Props) {
             </div>
             <div>{event.trigger ? formatStatus(event.trigger) : '—'}</div>
             <div>
-              <Tag type={statusToTagType(event.status)}>{formatStatus(event.status)}</Tag>
+              <Tag variant={statusToTagVariant(event.status)}>
+                {formatStatus(event.status)}
+              </Tag>
             </div>
             <div>
               <DateTime date={event.dateAdded} />

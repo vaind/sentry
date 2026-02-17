@@ -11,10 +11,9 @@ import {t} from 'sentry/locale';
 import {useApiQuery} from 'sentry/utils/queryClient';
 import useOrganization from 'sentry/utils/useOrganization';
 import {useParams} from 'sentry/utils/useParams';
-import ExploreBreadcrumb from 'sentry/views/explore/components/breadcrumb';
 import {PrReviewTimeline} from 'sentry/views/explore/prReview/prReviewTimeline';
 import type {CodeReviewEvent} from 'sentry/views/explore/prReview/types';
-import {formatStatus, statusToTagType} from 'sentry/views/explore/prReview/utils';
+import {formatStatus, statusToTagVariant} from 'sentry/views/explore/prReview/utils';
 
 export default function PrReviewDetail() {
   const organization = useOrganization();
@@ -42,7 +41,6 @@ export default function PrReviewDetail() {
       <Layout.Page>
         <Layout.Header>
           <Layout.HeaderContent>
-            <ExploreBreadcrumb />
             <Layout.Title>{title}</Layout.Title>
           </Layout.HeaderContent>
         </Layout.Header>
@@ -63,7 +61,7 @@ export default function PrReviewDetail() {
                 </DetailRow>
                 <DetailRow label={t('Author')}>{event.prAuthor ?? '—'}</DetailRow>
                 <DetailRow label={t('Status')}>
-                  <Tag type={statusToTagType(event.status)}>
+                  <Tag variant={statusToTagVariant(event.status)}>
                     {formatStatus(event.status)}
                   </Tag>
                 </DetailRow>

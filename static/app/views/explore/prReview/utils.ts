@@ -1,16 +1,14 @@
-import type {Tag} from '@sentry/scraps/badge';
+import type {TagVariant} from 'sentry/utils/theme/types';
 
 /**
- * Maps a code review event status to a Tag color type for visual differentiation.
+ * Maps a code review event status to a Tag variant for visual differentiation.
  */
-export function statusToTagType(
-  status: string
-): React.ComponentProps<typeof Tag>['type'] {
+export function statusToTagVariant(status: string): TagVariant {
   switch (status) {
     case 'review_completed':
       return 'success';
     case 'review_failed':
-      return 'error';
+      return 'danger';
     case 'preflight_denied':
     case 'webhook_filtered':
       return 'warning';
@@ -18,7 +16,7 @@ export function statusToTagType(
     case 'review_started':
       return 'info';
     default:
-      return 'default';
+      return 'muted';
   }
 }
 

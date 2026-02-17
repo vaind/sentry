@@ -1,5 +1,6 @@
 import {CompactSelect} from '@sentry/scraps/compactSelect';
 import {Flex} from '@sentry/scraps/layout';
+import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 
 import {t} from 'sentry/locale';
 
@@ -38,13 +39,17 @@ export function PrReviewFilters({
   return (
     <Flex gap="md">
       <CompactSelect
-        triggerProps={{prefix: t('Status')}}
+        trigger={triggerProps => (
+          <OverlayTrigger.Button {...triggerProps} prefix={t('Status')} />
+        )}
         value={status}
         options={STATUS_OPTIONS}
         onChange={opt => onStatusChange(opt.value)}
       />
       <CompactSelect
-        triggerProps={{prefix: t('Trigger')}}
+        trigger={triggerProps => (
+          <OverlayTrigger.Button {...triggerProps} prefix={t('Trigger')} />
+        )}
         value={triggerType}
         options={TRIGGER_OPTIONS}
         onChange={opt => onTriggerTypeChange(opt.value)}
