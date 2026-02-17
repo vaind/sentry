@@ -61,7 +61,7 @@ export function PrReviewList({events, isLoading, pageLinks}: Props) {
               </Tag>
             </div>
             <div>
-              <DateTime date={event.dateAdded} />
+              <DateTime date={event.triggerAt ?? event.dateAdded} />
             </div>
             <div>{event.commentsPosted ?? '—'}</div>
           </Fragment>

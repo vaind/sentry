@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.db.models.functions import Coalesce
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -39,18 +40,20 @@ class OrganizationCodeReviewEventsEndpoint(OrganizationEndpoint):
         if trigger_type:
             queryset = queryset.filter(trigger=trigger_type)
 
+        queryset = queryset.annotate(event_time=Coalesce("trigger_at", "date_added"))
+
         start = request.GET.get("start")
         if start:
-            queryset = queryset.filter(date_added__gte=start)
+            queryset = queryset.filter(event_time__gte=start)
 
         end = request.GET.get("end")
         if end:
-            queryset = queryset.filter(date_added__lte=end)
+            queryset = queryset.filter(event_time__lte=end)
 
         return self.paginate(
             request=request,
             queryset=queryset,
-            order_by="-date_added",
+            order_by="-event_time",
             paginator_cls=OffsetPaginator,
             on_results=lambda x: serialize(x, request.user, CodeReviewEventSerializer()),
         )

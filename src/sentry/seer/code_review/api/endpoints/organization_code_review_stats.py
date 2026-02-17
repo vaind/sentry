@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Count, Q, Sum
-from django.db.models.functions import TruncDay
+from django.db.models.functions import Coalesce, TruncDay
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -30,13 +30,15 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if repository_id:
             queryset = queryset.filter(repository_id=repository_id)
 
+        queryset = queryset.annotate(event_time=Coalesce("trigger_at", "date_added"))
+
         start = request.GET.get("start")
         if start:
-            queryset = queryset.filter(date_added__gte=start)
+            queryset = queryset.filter(event_time__gte=start)
 
         end = request.GET.get("end")
         if end:
-            queryset = queryset.filter(date_added__lte=end)
+            queryset = queryset.filter(event_time__lte=end)
 
         stats = queryset.aggregate(
             total=Count("id"),
@@ -48,7 +50,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         )
 
         time_series = (
-            queryset.annotate(day=TruncDay("date_added"))
+            queryset.annotate(day=TruncDay("event_time"))
             .values("day")
             .annotate(
                 count=Count("id"),
