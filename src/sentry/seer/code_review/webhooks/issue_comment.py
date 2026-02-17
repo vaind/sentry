@@ -13,9 +13,11 @@ from sentry.integrations.github.client import GitHubReaction
 from sentry.integrations.github.utils import is_github_rate_limit_sensitive
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.integrations.services.integration import RpcIntegration
+from sentry.models.code_review_event import CodeReviewEvent
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 
+from ..event_recorder import update_event_status
 from ..metrics import WebhookFilteredReason, record_webhook_filtered, record_webhook_received
 from ..utils import _get_target_commit_sha, delete_existing_reactions_and_add_reaction
 
@@ -52,6 +54,7 @@ def handle_issue_comment_event(
     repo: Repository,
     integration: RpcIntegration | None = None,
     extra: Mapping[str, str | None],
+    event_record: CodeReviewEvent | None = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -64,6 +67,7 @@ def handle_issue_comment_event(
         record_webhook_filtered(
             github_event, github_event_action, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
+        update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
         logger.info(Log.UNSUPPORTED_ACTION.value, extra=extra)
         return
 
@@ -77,6 +81,7 @@ def handle_issue_comment_event(
         record_webhook_filtered(
             github_event, github_event_action, WebhookFilteredReason.NOT_PR_COMMENT
         )
+        update_event_status(event_record, "webhook_filtered", denial_reason="not_pr_comment")
         logger.info(Log.NOT_PR_COMMENT.value, extra=extra)
         return
 
@@ -84,6 +89,7 @@ def handle_issue_comment_event(
         record_webhook_filtered(
             github_event, github_event_action, WebhookFilteredReason.NOT_REVIEW_COMMAND
         )
+        update_event_status(event_record, "webhook_filtered", denial_reason="not_review_command")
         logger.info(Log.NOT_REVIEW_COMMAND.value, extra=extra)
         return
 
@@ -118,4 +124,5 @@ def handle_issue_comment_event(
         organization=organization,
         repo=repo,
         target_commit_sha=target_commit_sha,
+        event_record=event_record,
     )

@@ -138,6 +138,14 @@ export function ExploreSecondaryNav() {
               {t('Replays')}
             </SecondaryNav.Item>
           </Feature>
+          <Feature features="pr-review-dashboard">
+            <SecondaryNav.Item
+              to={`${baseUrl}/pr-review/`}
+              analyticsItemName="explore_pr_review"
+            >
+              {t('PR Reviews')}
+            </SecondaryNav.Item>
+          </Feature>
           <SecondaryNav.Item
             to={`${baseUrl}/releases/`}
             analyticsItemName="explore_releases"

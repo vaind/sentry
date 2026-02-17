@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, ValidationError  # noqa: F401
 
 from sentry.integrations.github.webhook_types import GithubWebhookType
 
+from ..event_recorder import update_event_status
 from ..metrics import (
     CodeReviewErrorType,
     WebhookFilteredReason,
@@ -71,6 +72,7 @@ def handle_check_run_event(
     github_event: GithubWebhookType,
     event: Mapping[str, Any],
     extra: Mapping[str, str | None],
+    event_record: Any | None = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -102,6 +104,7 @@ def handle_check_run_event(
 
     if action != GitHubCheckRunAction.REREQUESTED:
         record_webhook_filtered(github_event, action, WebhookFilteredReason.UNSUPPORTED_ACTION)
+        update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
         return
 
     try:
@@ -130,6 +133,7 @@ def handle_check_run_event(
         enqueued_at_str=datetime.now(timezone.utc).isoformat(),
     )
     record_webhook_enqueued(github_event, action)
+    update_event_status(event_record, "task_enqueued")
 
 
 def _validate_github_check_run_event(event: Mapping[str, Any]) -> GitHubCheckRunEvent:

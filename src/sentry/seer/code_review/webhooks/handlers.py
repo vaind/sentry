@@ -14,6 +14,7 @@ from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.utils.redis import redis_clusters
 
+from ..event_recorder import create_event_record
 from ..metrics import record_webhook_filtered
 from ..preflight import CodeReviewPreflightService
 from ..utils import extract_github_info
@@ -90,6 +91,16 @@ def handle_webhook_event(
                 github_event_action=event.get("action", "unknown"),
                 reason=preflight.denial_reason,
             )
+            create_event_record(
+                organization_id=organization.id,
+                repository_id=repo.id,
+                github_event_type=github_event.value,
+                github_event_action=event.get("action", "unknown"),
+                github_delivery_id=github_delivery_id,
+                event=event,
+                status="preflight_denied",
+                denial_reason=preflight.denial_reason.value,
+            )
             if organization.slug == "sentry":
                 logger.info(
                     "github.webhook.code_review.denied",
@@ -117,6 +128,16 @@ def handle_webhook_event(
                 logger.warning("github.webhook.code_review.duplicate_delivery_skipped", extra=extra)
                 return
 
+    event_record = create_event_record(
+        organization_id=organization.id,
+        repository_id=repo.id,
+        github_event_type=github_event.value,
+        github_event_action=event.get("action", "unknown"),
+        github_delivery_id=github_delivery_id,
+        event=event,
+        status="webhook_received",
+    )
+
     handler(
         github_event=github_event,
         event=event,
@@ -125,4 +146,5 @@ def handle_webhook_event(
         integration=integration,
         org_code_review_settings=preflight.settings,
         extra=extra,
+        event_record=event_record,
     )

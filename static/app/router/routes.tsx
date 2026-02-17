@@ -2344,6 +2344,20 @@ function buildRoutes(): RouteObject[] {
       children: metricsChildren,
     },
     {
+      path: 'pr-review/',
+      component: make(() => import('sentry/views/explore/prReview')),
+      children: [
+        {
+          index: true,
+          component: make(() => import('sentry/views/explore/prReview/content')),
+        },
+        {
+          path: ':eventId/',
+          component: make(() => import('sentry/views/explore/prReview/detail')),
+        },
+      ],
+    },
+    {
       path: 'saved-queries/',
       component: make(() => import('sentry/views/explore/savedQueries')),
     },

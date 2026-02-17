@@ -14,10 +14,12 @@ from sentry.integrations.github.client import GitHubReaction
 from sentry.integrations.github.utils import is_github_rate_limit_sensitive
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.integrations.services.integration import RpcIntegration
+from sentry.models.code_review_event import CodeReviewEvent
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.models.repositorysettings import CodeReviewSettings, CodeReviewTrigger
 
+from ..event_recorder import update_event_status
 from ..metrics import (
     CodeReviewErrorType,
     WebhookFilteredReason,
@@ -95,6 +97,7 @@ def handle_pull_request_event(
     integration: RpcIntegration | None = None,
     org_code_review_settings: CodeReviewSettings | None = None,
     extra: Mapping[str, str | None],
+    event_record: CodeReviewEvent | None = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -125,6 +128,7 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
+        update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
         return
 
     if action not in WHITELISTED_ACTIONS:
@@ -132,6 +136,7 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
+        update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
         return
 
     action_requires_trigger_permission = ACTIONS_REQUIRING_TRIGGER_CHECK.get(action)
@@ -140,6 +145,7 @@ def handle_pull_request_event(
         or action_requires_trigger_permission not in org_code_review_settings.triggers
     ):
         record_webhook_filtered(github_event, action_value, WebhookFilteredReason.TRIGGER_DISABLED)
+        update_event_status(event_record, "webhook_filtered", denial_reason="trigger_disabled")
         return
 
     # Skip draft check for CLOSED actions to ensure Seer receives cleanup notifications
@@ -176,4 +182,5 @@ def handle_pull_request_event(
         organization=organization,
         repo=repo,
         target_commit_sha=_get_target_commit_sha(github_event, event, repo, integration),
+        event_record=event_record,
     )
