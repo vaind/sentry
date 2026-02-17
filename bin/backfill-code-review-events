@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 DEV ONLY:
-Backfill CodeReviewEvent records .
+Backfill CodeReviewEvent records.
 
 Usage:
     1. Export as CSV:
@@ -20,12 +20,17 @@ configure()
 import argparse
 import csv
 import logging
+import os
+import subprocess
 from datetime import datetime
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.repository import Repository
+from sentry.utils import json
 
 logger = logging.getLogger(__name__)
+
+GITHUB_GRAPHQL_BATCH_SIZE = 100
 
 
 def parse_dt(value: str | None) -> datetime | None:
@@ -37,21 +42,94 @@ def parse_dt(value: str | None) -> datetime | None:
         return None
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Backfill CodeReviewEvent from Seer CSV export")
-    parser.add_argument("csv_file", help="CSV file exported from the Seer events query")
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print what would be created without writing to DB",
-    )
-    args = parser.parse_args()
+def parse_run_state_value(raw: str | None) -> dict | None:
+    """Parse run_state_value JSON, stripping null bytes if present."""
+    if not raw or raw in ("None", ""):
+        return None
+    try:
+        cleaned = raw.replace("\x00", "").replace("\\u0000", "")
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        return None
 
-    with open(args.csv_file) as f:
+
+def fetch_pr_titles(owner: str, repo: str, pr_numbers: list[int]) -> dict[int, str]:
+    """Batch-fetch PR titles using gh CLI GraphQL API."""
+    titles: dict[int, str] = {}
+    for batch_start in range(0, len(pr_numbers), GITHUB_GRAPHQL_BATCH_SIZE):
+        batch = pr_numbers[batch_start : batch_start + GITHUB_GRAPHQL_BATCH_SIZE]
+        # Build GraphQL query with aliases for each PR
+        fragments = []
+        for i, pr_num in enumerate(batch):
+            fragments.append(f"pr{i}: pullRequest(number: {pr_num}) {{ number title }}")
+        query = f"""{{
+  repository(owner: "{owner}", name: "{repo}") {{
+    {chr(10).join(f"    {f}" for f in fragments)}
+  }}
+}}"""
+        try:
+            result = subprocess.run(
+                ["gh", "api", "graphql", "-f", f"query={query}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            data = json.loads(result.stdout)
+            repo_data = data.get("data", {}).get("repository", {})
+            for key, value in repo_data.items():
+                if value and "title" in value:
+                    titles[value["number"]] = value["title"]
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+            logger.exception("Failed to fetch PR titles batch starting at %d", batch_start)
+    return titles
+
+
+def main():
+    # Support both argparse (direct invocation) and env vars (sentry/getsentry exec)
+    csv_file = os.environ.get("BACKFILL_CSV")
+    dry_run = os.environ.get("BACKFILL_DRY_RUN") == "1"
+
+    if not csv_file:
+        parser = argparse.ArgumentParser(
+            description="Backfill CodeReviewEvent from Seer CSV export"
+        )
+        parser.add_argument("csv_file", help="CSV file exported from the Seer events query")
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Print what would be created without writing to DB",
+        )
+        args = parser.parse_args()
+        csv_file = args.csv_file
+        dry_run = args.dry_run
+
+    with open(csv_file) as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
-    logger.info("Read %d rows from %s", len(rows), args.csv_file)
+    logger.info("Read %d rows from %s", len(rows), csv_file)
+
+    # Collect unique PR numbers per repo for title fetching
+    pr_numbers_by_repo: dict[str, set[int]] = {}
+    for row in rows:
+        repo_full_name = row.get("repo_full_name", "").strip()
+        pr_number = row.get("pr_number", "").strip()
+        if repo_full_name and pr_number:
+            pr_numbers_by_repo.setdefault(repo_full_name, set()).add(int(pr_number))
+
+    # Fetch PR titles via GitHub GraphQL
+    pr_titles: dict[str, dict[int, str]] = {}
+    for repo_full_name, pr_nums in pr_numbers_by_repo.items():
+        owner, _, repo_name = repo_full_name.partition("/")
+        if owner and repo_name:
+            unique_prs = sorted(pr_nums)
+            logger.info("Fetching %d PR titles for %s", len(unique_prs), repo_full_name)
+            pr_titles[repo_full_name] = fetch_pr_titles(owner, repo_name, unique_prs)
+            logger.info(
+                "Fetched %d titles for %s",
+                len(pr_titles[repo_full_name]),
+                repo_full_name,
+            )
 
     repo_cache: dict[str, Repository | None] = {}
 
@@ -83,7 +161,18 @@ def main():
             continue
 
         org_id = repo.organization_id
-        github_delivery_id = f"backfill-run-{run_id}"
+
+        # Try to extract github_delivery_id from run_state JSON
+        state = parse_run_state_value(row.get("run_state_value"))
+        github_delivery_id = None
+        if state:
+            github_delivery_id = state.get("github_delivery_id")
+            if not github_delivery_id:
+                request_data = state.get("request")
+                if isinstance(request_data, dict):
+                    github_delivery_id = request_data.get("github_delivery_id")
+        if not github_delivery_id:
+            github_delivery_id = f"backfill-run-{run_id}"
 
         # Check if already exists
         if CodeReviewEvent.objects.filter(github_delivery_id=github_delivery_id).exists():
@@ -101,12 +190,15 @@ def main():
         )
 
         pr_url = f"https://github.com/{repo_full_name}/pull/{pr_number}"
+        pr_title = pr_titles.get(repo_full_name, {}).get(int(pr_number))
 
-        if args.dry_run:
+        if dry_run:
             logger.info(
-                "Would create: PR #%s run=%s comments=%d status=%s",
+                "Would create: PR #%s '%s' run=%s delivery=%s comments=%d status=%s",
                 pr_number,
+                pr_title or "(no title)",
                 run_id,
+                github_delivery_id,
                 comments_posted,
                 status,
             )
@@ -118,6 +210,7 @@ def main():
                 organization_id=org_id,
                 repository_id=repo.id,
                 pr_number=int(pr_number),
+                pr_title=pr_title,
                 pr_author=row.get("pr_author", "").strip() or None,
                 pr_url=pr_url,
                 github_event_type="pull_request",
@@ -139,7 +232,7 @@ def main():
             logger.exception("Row %d (run=%s): error creating record", i + 1, run_id)
             errors += 1
 
-    action = "Would create" if args.dry_run else "Created"
+    action = "Would create" if dry_run else "Created"
     logger.info("%s %d, skipped %d (already exist), errors %d", action, created, skipped, errors)
 
 
