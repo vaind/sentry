@@ -10,10 +10,7 @@ logger = logging.getLogger(__name__)
 
 def report_code_review_result(
     *,
-    organization_id: int,
-    repository_id: int,
-    pr_number: int,
-    github_delivery_id: str | None = None,
+    github_delivery_id: str,
     seer_run_id: str,
     status: str,
     comments_posted: int,
@@ -23,41 +20,16 @@ def report_code_review_result(
 ) -> dict:
     """
     Called by Seer after completing (or failing) a code review.
-    Updates the corresponding CodeReviewEvent record.
+    Updates the corresponding CodeReviewEvent record matched by github_delivery_id.
     """
-
-    # Find the matching event record
-    event_record = None
-
-    # Try exact match by github_delivery_id first
-    if github_delivery_id:
-        event_record = CodeReviewEvent.objects.filter(
-            github_delivery_id=github_delivery_id,
-        ).first()
-
-    # Fallback: match by org/repo/pr with recent sent_to_seer or task_enqueued status
-    if event_record is None:
-        event_record = (
-            CodeReviewEvent.objects.filter(
-                organization_id=organization_id,
-                repository_id=repository_id,
-                pr_number=pr_number,
-                status__in=[
-                    CodeReviewEventStatus.SENT_TO_SEER,
-                    CodeReviewEventStatus.TASK_ENQUEUED,
-                ],
-            )
-            .order_by("-date_added")
-            .first()
-        )
+    event_record = CodeReviewEvent.objects.filter(
+        github_delivery_id=github_delivery_id,
+    ).first()
 
     if event_record is None:
         logger.warning(
             "seer.code_review.callback.no_matching_event",
             extra={
-                "organization_id": organization_id,
-                "repository_id": repository_id,
-                "pr_number": pr_number,
                 "github_delivery_id": github_delivery_id,
                 "seer_run_id": seer_run_id,
             },

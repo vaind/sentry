@@ -20,9 +20,6 @@ class TestReportCodeReviewResult(TestCase):
         )
 
         result = report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=42,
             github_delivery_id="match-by-delivery",
             seer_run_id="seer-run-001",
             status="completed",
@@ -35,34 +32,9 @@ class TestReportCodeReviewResult(TestCase):
         assert record.seer_run_id == "seer-run-001"
         assert record.comments_posted == 3
 
-    def test_falls_back_to_org_repo_pr_match(self) -> None:
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            github_event_type="pull_request",
-            github_event_action="opened",
-            pr_number=55,
-            status=CodeReviewEventStatus.SENT_TO_SEER,
-        )
-
-        result = report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=55,
-            seer_run_id="seer-run-002",
-            status="completed",
-            comments_posted=1,
-        )
-
-        assert result == {"status": "ok"}
-        record.refresh_from_db()
-        assert record.status == CodeReviewEventStatus.REVIEW_COMPLETED
-
     def test_returns_not_found_when_no_match(self) -> None:
         result = report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=999,
+            github_delivery_id="does-not-exist",
             seer_run_id="seer-run-003",
             status="completed",
             comments_posted=0,
@@ -82,9 +54,6 @@ class TestReportCodeReviewResult(TestCase):
         )
 
         report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=10,
             github_delivery_id="fail-delivery",
             seer_run_id="seer-run-004",
             status="failed",
@@ -108,9 +77,6 @@ class TestReportCodeReviewResult(TestCase):
         )
 
         report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=11,
             github_delivery_id="started-delivery",
             seer_run_id="seer-run-005",
             status="started",
@@ -134,9 +100,6 @@ class TestReportCodeReviewResult(TestCase):
         )
 
         report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=12,
             github_delivery_id="ts-delivery",
             seer_run_id="seer-run-006",
             status="completed",
@@ -161,9 +124,6 @@ class TestReportCodeReviewResult(TestCase):
         )
 
         report_code_review_result(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            pr_number=13,
             github_delivery_id="bad-ts-delivery",
             seer_run_id="seer-run-007",
             status="completed",
