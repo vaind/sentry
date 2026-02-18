@@ -3,10 +3,10 @@ import {Fragment} from 'react';
 import {Tag} from '@sentry/scraps/badge';
 import {ExternalLink, Link} from '@sentry/scraps/link';
 
-import {DateTime} from 'sentry/components/dateTime';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Pagination from 'sentry/components/pagination';
 import {PanelTable} from 'sentry/components/panels/panelTable';
+import TimeSince from 'sentry/components/timeSince';
 import {IconOpen} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import useOrganization from 'sentry/utils/useOrganization';
@@ -84,7 +84,7 @@ export function PrReviewList({prs, isLoading, pageLinks}: Props) {
             <div>{pr.eventCount}</div>
             <div>{pr.totalComments}</div>
             <div>
-              <DateTime date={pr.lastActivity} />
+              <TimeSince date={pr.lastActivity} />
             </div>
           </Fragment>
         ))}
