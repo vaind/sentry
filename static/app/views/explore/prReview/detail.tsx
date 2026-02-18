@@ -31,6 +31,7 @@ import {
 } from 'sentry/views/explore/prReview/utils';
 
 const PIPELINE_STAGES = [
+  {key: 'triggerAt', label: t('Trigger')},
   {key: 'webhookReceivedAt', label: t('Webhook Received')},
   {key: 'preflightCompletedAt', label: t('Preflight')},
   {key: 'taskEnqueuedAt', label: t('Enqueued')},
