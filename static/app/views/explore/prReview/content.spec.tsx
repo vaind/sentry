@@ -41,7 +41,7 @@ describe('PrReviewContent', () => {
 
     render(<PrReviewContent />, {organization});
 
-    expect(await screen.findByText('PR Reviews')).toBeInTheDocument();
+    expect(await screen.findByText('Seer PR Reviews')).toBeInTheDocument();
   });
 
   it('renders PRs from the API', async () => {

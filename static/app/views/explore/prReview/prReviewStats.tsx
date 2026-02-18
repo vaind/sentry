@@ -251,7 +251,7 @@ const AuthorLine = styled('div')`
 const TopAuthorsLabel = styled('div')`
   font-size: ${p => p.theme.font.size.xs};
   font-weight: ${p => p.theme.font.weight.sans.medium};
-  color: ${p => p.theme.tokens.content.muted};
+  color: ${p => p.theme.tokens.content.secondary};
   text-transform: uppercase;
 `;
 
