@@ -45,7 +45,7 @@ class TestCleanupOldCodeReviewEvents(TestCase):
         new_event = self.create_code_review_event(
             organization=self.organization,
             repository=repo,
-            trigger_event_action="synchronize",
+            raw_event_action="synchronize",
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 

@@ -29,7 +29,7 @@ class CodeReviewEventStatus(StrEnum):
 @region_silo_model
 class CodeReviewEvent(Model):
     """
-    Records every GitHub webhook event entering the Seer code review pipeline.
+    Records every SCM webhook event entering the Seer code review pipeline.
     Tracks the full lifecycle from webhook receipt to review completion.
     """
 
@@ -45,9 +45,9 @@ class CodeReviewEvent(Model):
     pr_url = models.TextField(null=True)
     pr_state = models.CharField(max_length=16, null=True)  # open, closed, merged
 
-    # Webhook event metadata
-    trigger_event_type = models.CharField(max_length=64)
-    trigger_event_action = models.CharField(max_length=64)
+    # Raw webhook event metadata (provider-specific values)
+    raw_event_type = models.CharField(max_length=64)
+    raw_event_action = models.CharField(max_length=64)
     trigger_id = models.CharField(max_length=64, null=True)
 
     # Provider-agnostic fields (aligns with SeerCodeReviewConfig)
@@ -85,8 +85,8 @@ class CodeReviewEvent(Model):
         )
         constraints = [
             models.UniqueConstraint(
-                fields=["organization_id", "trigger_id"],
-                name="unique_org_trigger_id",
+                fields=["organization_id", "repository_id", "trigger_id"],
+                name="unique_org_repo_trigger_id",
                 condition=models.Q(trigger_id__isnull=False),
             ),
         ]

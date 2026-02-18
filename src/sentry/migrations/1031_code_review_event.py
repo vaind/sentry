@@ -49,8 +49,8 @@ class Migration(CheckedMigration):
                 ("pr_author", models.TextField(null=True)),
                 ("pr_url", models.TextField(null=True)),
                 ("pr_state", models.CharField(max_length=16, null=True)),
-                ("trigger_event_type", models.CharField(max_length=64)),
-                ("trigger_event_action", models.CharField(max_length=64)),
+                ("raw_event_type", models.CharField(max_length=64)),
+                ("raw_event_action", models.CharField(max_length=64)),
                 ("trigger_id", models.CharField(max_length=64, null=True)),
                 ("trigger", models.CharField(max_length=64, null=True)),
                 ("trigger_user", models.TextField(null=True)),
@@ -91,8 +91,8 @@ class Migration(CheckedMigration):
                 "constraints": [
                     models.UniqueConstraint(
                         condition=models.Q(("trigger_id__isnull", False)),
-                        fields=("organization_id", "trigger_id"),
-                        name="unique_org_trigger_id",
+                        fields=("organization_id", "repository_id", "trigger_id"),
+                        name="unique_org_repo_trigger_id",
                     )
                 ],
             },

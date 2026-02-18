@@ -23,7 +23,7 @@ def _extract_pr_state(pr: Mapping[str, Any]) -> str | None:
 
 
 def _extract_pr_metadata(
-    trigger_event_type: str,
+    raw_event_type: str,
     event: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Extract PR metadata from a webhook payload based on event type."""
@@ -34,7 +34,7 @@ def _extract_pr_metadata(
     pr_state = None
     target_commit_sha = None
 
-    if trigger_event_type == "pull_request":
+    if raw_event_type == "pull_request":
         pr = event.get("pull_request", {})
         pr_number = pr.get("number")
         pr_title = pr.get("title")
@@ -42,7 +42,7 @@ def _extract_pr_metadata(
         pr_url = pr.get("html_url")
         pr_state = _extract_pr_state(pr)
         target_commit_sha = pr.get("head", {}).get("sha")
-    elif trigger_event_type == "issue_comment":
+    elif raw_event_type == "issue_comment":
         issue = event.get("issue", {})
         pr_number = issue.get("number")
         pr_title = issue.get("title")
@@ -77,14 +77,14 @@ _TRIGGER_MAP: dict[str, dict[str, str]] = {
 
 
 def _extract_trigger_metadata(
-    trigger_event_type: str,
-    trigger_event_action: str,
+    raw_event_type: str,
+    raw_event_action: str,
     event: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Extract provider-agnostic trigger fields from a webhook payload."""
-    trigger = _TRIGGER_MAP.get(trigger_event_type, {}).get(trigger_event_action)
+    trigger = _TRIGGER_MAP.get(raw_event_type, {}).get(raw_event_action)
     trigger_user = event.get("sender", {}).get("login")
-    trigger_at = _extract_trigger_timestamp(trigger_event_type, event)
+    trigger_at = _extract_trigger_timestamp(raw_event_type, event)
 
     return {
         "trigger": trigger,
@@ -93,16 +93,16 @@ def _extract_trigger_metadata(
     }
 
 
-def _extract_trigger_timestamp(trigger_event_type: str, event: Mapping[str, Any]) -> datetime:
+def _extract_trigger_timestamp(raw_event_type: str, event: Mapping[str, Any]) -> datetime:
     """Extract the trigger timestamp from the webhook payload.
 
     Falls back to now() for event types without a payload timestamp
     (e.g. check_run rerequested) or when parsing fails.
     """
     timestamp_str: str | None = None
-    if trigger_event_type == "pull_request":
+    if raw_event_type == "pull_request":
         timestamp_str = event.get("pull_request", {}).get("updated_at")
-    elif trigger_event_type == "issue_comment":
+    elif raw_event_type == "issue_comment":
         timestamp_str = event.get("comment", {}).get("created_at")
 
     if not timestamp_str:
@@ -117,16 +117,16 @@ def create_event_record(
     *,
     organization_id: int,
     repository_id: int,
-    trigger_event_type: str,
-    trigger_event_action: str,
+    raw_event_type: str,
+    raw_event_action: str,
     trigger_id: str | None,
     event: Mapping[str, Any],
     status: str,
     denial_reason: str | None = None,
 ) -> CodeReviewEvent | None:
     now = datetime.now(timezone.utc)
-    pr_metadata = _extract_pr_metadata(trigger_event_type, event)
-    trigger_metadata = _extract_trigger_metadata(trigger_event_type, trigger_event_action, event)
+    pr_metadata = _extract_pr_metadata(raw_event_type, event)
+    trigger_metadata = _extract_trigger_metadata(raw_event_type, raw_event_action, event)
 
     timestamp_field = _status_to_timestamp_field(status)
     timestamps = {timestamp_field: now} if timestamp_field else {}
@@ -137,8 +137,8 @@ def create_event_record(
         return CodeReviewEvent.objects.create(
             organization_id=organization_id,
             repository_id=repository_id,
-            trigger_event_type=trigger_event_type,
-            trigger_event_action=trigger_event_action,
+            raw_event_type=raw_event_type,
+            raw_event_action=raw_event_action,
             trigger_id=trigger_id,
             status=status,
             denial_reason=denial_reason,

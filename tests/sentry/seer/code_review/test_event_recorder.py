@@ -25,8 +25,8 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+            raw_event_type="pull_request",
+            raw_event_action="opened",
             trigger_id="abc-123",
             event=event_payload,
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
@@ -39,8 +39,8 @@ class TestCreateEventRecord(TestCase):
         assert record.pr_title == "Fix the bug"
         assert record.pr_author == "testuser"
         assert record.pr_url == "https://github.com/owner/repo/pull/42"
-        assert record.trigger_event_type == "pull_request"
-        assert record.trigger_event_action == "opened"
+        assert record.raw_event_type == "pull_request"
+        assert record.raw_event_action == "opened"
         assert record.trigger_id == "abc-123"
         assert record.trigger == "pr_opened"
         assert record.trigger_user == "triggeruser"
@@ -69,8 +69,8 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            trigger_event_type="issue_comment",
-            trigger_event_action="created",
+            raw_event_type="issue_comment",
+            raw_event_action="created",
             trigger_id="def-456",
             event=event_payload,
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
@@ -90,8 +90,8 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+            raw_event_type="pull_request",
+            raw_event_action="opened",
             trigger_id="ghi-789",
             event={
                 "pull_request": {
@@ -120,8 +120,8 @@ class TestCreateEventRecord(TestCase):
         create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+            raw_event_type="pull_request",
+            raw_event_action="opened",
             trigger_id="duplicate-id",
             event={"pull_request": {}},
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
@@ -130,8 +130,8 @@ class TestCreateEventRecord(TestCase):
         result = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+            raw_event_type="pull_request",
+            raw_event_action="opened",
             trigger_id="duplicate-id",
             event={"pull_request": {}},
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
@@ -145,8 +145,8 @@ class TestCreateEventRecord(TestCase):
         record = create_event_record(
             organization_id=self.organization.id,
             repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+            raw_event_type="pull_request",
+            raw_event_action="opened",
             trigger_id=None,
             event={"pull_request": {}},
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
@@ -234,8 +234,8 @@ class TestStatusToTimestampMapping(TestCase):
             record = create_event_record(
                 organization_id=self.organization.id,
                 repository_id=repo.id,
-                trigger_event_type="pull_request",
-                trigger_event_action="opened",
+                raw_event_type="pull_request",
+                raw_event_action="opened",
                 trigger_id=None,
                 event={"pull_request": {}},
                 status=status,

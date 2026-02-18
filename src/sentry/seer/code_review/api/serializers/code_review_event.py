@@ -22,8 +22,8 @@ class CodeReviewEventResponse(TypedDict):
     prTitle: str | None
     prAuthor: str | None
     prUrl: str | None
-    triggerEventType: str
-    triggerEventAction: str
+    rawEventType: str
+    rawEventAction: str
     triggerId: str | None
     trigger: str | None
     triggerUser: str | None
@@ -69,8 +69,8 @@ class CodeReviewEventSerializer(Serializer):
             "prTitle": obj.pr_title,
             "prAuthor": obj.pr_author,
             "prUrl": obj.pr_url,
-            "triggerEventType": obj.trigger_event_type,
-            "triggerEventAction": obj.trigger_event_action,
+            "rawEventType": obj.raw_event_type,
+            "rawEventAction": obj.raw_event_action,
             "triggerId": obj.trigger_id,
             "trigger": obj.trigger,
             "triggerUser": obj.trigger_user,

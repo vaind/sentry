@@ -8,6 +8,8 @@ export interface CodeReviewEvent {
   prNumber: number | null;
   prTitle: string | null;
   prUrl: string | null;
+  rawEventAction: string;
+  rawEventType: string;
   repositoryId: string;
   repositoryName: string | null;
   reviewCompletedAt: string | null;
@@ -19,8 +21,6 @@ export interface CodeReviewEvent {
   taskEnqueuedAt: string | null;
   trigger: string | null;
   triggerAt: string;
-  triggerEventAction: string;
-  triggerEventType: string;
   triggerId: string | null;
   triggerUser: string | null;
   webhookReceivedAt: string | null;

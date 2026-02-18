@@ -927,8 +927,8 @@ class Factories:
     def create_code_review_event(organization, repository, **kwargs):
         from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 
-        kwargs.setdefault("trigger_event_type", "pull_request")
-        kwargs.setdefault("trigger_event_action", "opened")
+        kwargs.setdefault("raw_event_type", "pull_request")
+        kwargs.setdefault("raw_event_action", "opened")
         kwargs.setdefault("status", CodeReviewEventStatus.REVIEW_COMPLETED)
 
         return CodeReviewEvent.objects.create(
