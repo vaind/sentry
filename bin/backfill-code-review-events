@@ -22,7 +22,7 @@ import csv
 import logging
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.repository import Repository
@@ -37,7 +37,10 @@ def parse_dt(value: str | None) -> datetime | None:
     if not value or value in ("None", ""):
         return None
     try:
-        return datetime.fromisoformat(value)
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except (ValueError, TypeError):
         return None
 
