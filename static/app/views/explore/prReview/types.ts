@@ -63,7 +63,13 @@ export interface CodeReviewComment {
   severity?: string;
 }
 
+export interface CodeReviewRepository {
+  id: string;
+  name: string;
+}
+
 export interface CodeReviewStats {
+  repositories: CodeReviewRepository[];
   stats: {
     skippedPrs: number;
     totalComments: number;

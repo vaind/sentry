@@ -80,12 +80,39 @@ class OrganizationCodeReviewStatsTest(APITestCase):
         assert "skipped" in entry
         assert "comments" in entry
 
+    def test_returns_repositories(self) -> None:
+        self._create_event(pr_number=1)
+
+        with self.feature("organizations:pr-review-dashboard"):
+            url = reverse(self.endpoint, args=[self.organization.slug])
+            response = self.client.get(url)
+
+        assert response.status_code == 200
+        repos = response.data["repositories"]
+        assert len(repos) == 1
+        assert repos[0]["id"] == str(self.repo.id)
+        assert repos[0]["name"] == "owner/repo"
+
+    def test_repositories_unaffected_by_repo_filter(self) -> None:
+        other_repo = self.create_repo(project=self.project, name="other/repo")
+        self._create_event(pr_number=1, repository_id=self.repo.id)
+        self._create_event(pr_number=2, repository_id=other_repo.id)
+
+        with self.feature("organizations:pr-review-dashboard"):
+            url = reverse(self.endpoint, args=[self.organization.slug])
+            response = self.client.get(url, {"repositoryId": str(self.repo.id)})
+
+        # Stats are filtered but repository list shows all repos
+        assert response.data["stats"]["totalPrs"] == 1
+        assert len(response.data["repositories"]) == 2
+
     def test_empty_stats(self) -> None:
         with self.feature("organizations:pr-review-dashboard"):
             url = reverse(self.endpoint, args=[self.organization.slug])
             response = self.client.get(url)
 
         assert response.status_code == 200
+        assert response.data["repositories"] == []
         stats = response.data["stats"]
         assert stats["totalPrs"] == 0
         assert stats["totalReviews"] == 0

@@ -11,6 +11,7 @@ from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.repository import Repository
 
 SKIPPED_STATUSES = Q(status=CodeReviewEventStatus.PREFLIGHT_DENIED) | Q(
     status=CodeReviewEventStatus.WEBHOOK_FILTERED
@@ -29,11 +30,18 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if not features.has("organizations:pr-review-dashboard", organization, actor=request.user):
             return Response(status=404)
 
-        queryset = CodeReviewEvent.objects.filter(organization_id=organization.id)
+        base_queryset = CodeReviewEvent.objects.filter(organization_id=organization.id)
 
-        repository_id = request.GET.get("repositoryId")
-        if repository_id:
-            queryset = queryset.filter(repository_id=repository_id)
+        # Distinct repos with code review events (always unfiltered)
+        repo_ids = base_queryset.values_list("repository_id", flat=True).distinct()
+        repos = Repository.objects.filter(id__in=repo_ids)
+        repositories = [{"id": str(r.id), "name": r.name} for r in repos.order_by("name")]
+
+        queryset = base_queryset
+
+        repository_ids = request.GET.getlist("repositoryId")
+        if repository_ids:
+            queryset = queryset.filter(repository_id__in=repository_ids)
 
         pr_state = request.GET.get("status")
         if pr_state:
@@ -88,6 +96,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
 
         return Response(
             {
+                "repositories": repositories,
                 "stats": {
                     "totalPrs": total_prs,
                     "totalReviews": total_reviews,

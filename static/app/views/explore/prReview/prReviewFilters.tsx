@@ -3,12 +3,14 @@ import {Flex} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 
 import {t} from 'sentry/locale';
+import type {CodeReviewRepository} from 'sentry/views/explore/prReview/types';
 
 interface Props {
+  onRepositoryChange: (repositoryIds: string[]) => void;
   onStatusChange: (status: string) => void;
-  onTriggerTypeChange: (triggerType: string) => void;
+  repositories: CodeReviewRepository[];
+  repositoryIds: string[];
   status: string;
-  triggerType: string;
 }
 
 const STATUS_OPTIONS = [
@@ -18,19 +20,19 @@ const STATUS_OPTIONS = [
   {value: 'closed', label: t('Closed')},
 ];
 
-const TRIGGER_OPTIONS = [
-  {value: '', label: t('All Triggers')},
-  {value: 'on_ready_for_review', label: t('Ready for Review')},
-  {value: 'on_new_commit', label: t('New Commit')},
-  {value: 'on_command_phrase', label: t('Command Phrase')},
-];
-
 export function PrReviewFilters({
   status,
-  triggerType,
+  repositoryIds,
+  repositories,
   onStatusChange,
-  onTriggerTypeChange,
+  onRepositoryChange,
 }: Props) {
+  const repoOptions = repositories.map(repo => ({
+    value: repo.id,
+    label: repo.name,
+    textValue: repo.name,
+  }));
+
   return (
     <Flex gap="md">
       <CompactSelect
@@ -42,12 +44,15 @@ export function PrReviewFilters({
         onChange={opt => onStatusChange(opt.value)}
       />
       <CompactSelect
+        multiple
+        searchable
+        searchPlaceholder={t('Search repositories...')}
         trigger={triggerProps => (
-          <OverlayTrigger.Button {...triggerProps} prefix={t('Trigger')} />
+          <OverlayTrigger.Button {...triggerProps} prefix={t('Repository')} />
         )}
-        value={triggerType}
-        options={TRIGGER_OPTIONS}
-        onChange={opt => onTriggerTypeChange(opt.value)}
+        value={repositoryIds}
+        options={repoOptions}
+        onChange={opts => onRepositoryChange(opts.map(o => o.value))}
       />
     </Flex>
   );

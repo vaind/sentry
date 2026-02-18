@@ -28,9 +28,9 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
 
         queryset = CodeReviewEvent.objects.filter(organization_id=organization.id)
 
-        repository_id = request.GET.get("repositoryId")
-        if repository_id:
-            queryset = queryset.filter(repository_id=repository_id)
+        repository_ids = request.GET.getlist("repositoryId")
+        if repository_ids:
+            queryset = queryset.filter(repository_id__in=repository_ids)
 
         status = request.GET.get("status")
         if status:

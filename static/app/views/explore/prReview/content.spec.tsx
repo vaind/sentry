@@ -10,6 +10,7 @@ describe('PrReviewContent', () => {
   });
 
   const mockStats = {
+    repositories: [{id: '10', name: 'owner/repo'}],
     stats: {
       totalPrs: 10,
       totalReviews: 15,

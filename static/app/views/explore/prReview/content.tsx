@@ -19,14 +19,14 @@ import type {
 export default function PrReviewContent() {
   const organization = useOrganization();
   const [status, setStatus] = useState('');
-  const [triggerType, setTriggerType] = useState('');
+  const [repositoryIds, setRepositoryIds] = useState<string[]>([]);
 
-  const queryParams: Record<string, string> = {};
+  const queryParams: Record<string, string | string[]> = {};
   if (status) {
     queryParams.status = status;
   }
-  if (triggerType) {
-    queryParams.triggerType = triggerType;
+  if (repositoryIds.length > 0) {
+    queryParams.repositoryId = repositoryIds;
   }
 
   const {
@@ -64,9 +64,10 @@ export default function PrReviewContent() {
             <Grid gap="xl" columns="100%">
               <PrReviewFilters
                 status={status}
-                triggerType={triggerType}
+                repositoryIds={repositoryIds}
+                repositories={stats?.repositories ?? []}
                 onStatusChange={setStatus}
-                onTriggerTypeChange={setTriggerType}
+                onRepositoryChange={setRepositoryIds}
               />
               <PrReviewStats stats={stats} statusFilter={status} />
               <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
