@@ -66,6 +66,7 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             queryset=pr_groups,
             order_by="-last_activity",
             paginator_cls=OffsetPaginator,
+            default_per_page=25,
             on_results=lambda groups: self._enrich_groups(groups, queryset),
         )
 

@@ -33,7 +33,7 @@ export function PrReviewStats({stats, statusFilter}: Props) {
     },
     {
       seriesName: t('Comments'),
-      color: theme.colors.purple400,
+      color: theme.colors.blue400,
       data: stats.timeSeries.map(d => ({name: d.date, value: d.comments})),
     },
   ];

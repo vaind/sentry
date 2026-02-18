@@ -37,8 +37,9 @@ function getRepoTriggerLabel(
   if (repositoryIds.length === 0) {
     return t('All Repositories');
   }
-  const selected = repositories.find(r => r.id === repositoryIds[0]);
-  const label = selected?.name ?? repositoryIds[0];
+  const firstId = repositoryIds[0]!;
+  const selected = repositories.find(r => r.id === firstId);
+  const label = selected?.name ?? firstId;
   if (repositoryIds.length === 1) {
     return label;
   }
