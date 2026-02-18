@@ -18,7 +18,6 @@ SEER_STATUS_MAP: dict[str, CodeReviewEventStatus] = {
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
-    """Parse an ISO timestamp string, returning None on invalid input."""
     if not value:
         return None
     try:
@@ -33,10 +32,6 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     retry=None,
 )
 def process_pr_review_completion(*, payload: dict[str, Any]) -> None:
-    """
-    Celery task that processes the seer.pr_review_completed webhook payload
-    and updates the corresponding CodeReviewEvent record.
-    """
     trigger_id = payload.get("trigger_id")
     seer_run_id = payload.get("seer_run_id")
     status = payload.get("status", "completed")

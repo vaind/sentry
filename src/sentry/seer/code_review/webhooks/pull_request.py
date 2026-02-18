@@ -68,7 +68,7 @@ class PullRequestAction(enum.StrEnum):
     UNLOCKED = "unlocked"
 
 
-WHITELISTED_ACTIONS = {
+ALLOWED_ACTIONS = {
     PullRequestAction.CLOSED,
     PullRequestAction.OPENED,
     PullRequestAction.READY_FOR_REVIEW,
@@ -100,11 +100,7 @@ def handle_pull_request_event(
     event_record: CodeReviewEvent | None = None,
     **kwargs: Any,
 ) -> None:
-    """
-    Handle pull_request webhook events for code review.
-
-    This handler processes PR events and sends them directly to Seer
-    """
+    """Handle pull_request webhook events by validating and forwarding to Seer."""
     pull_request = event.get("pull_request")
     if not pull_request:
         logger.warning(Log.MISSING_PULL_REQUEST.value, extra=extra)
@@ -131,7 +127,7 @@ def handle_pull_request_event(
         update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
         return
 
-    if action not in WHITELISTED_ACTIONS:
+    if action not in ALLOWED_ACTIONS:
         logger.warning(Log.UNSUPPORTED_ACTION.value, extra=extra)
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
@@ -148,14 +144,12 @@ def handle_pull_request_event(
         update_event_status(event_record, "webhook_filtered", denial_reason="trigger_disabled")
         return
 
-    # Skip draft check for CLOSED actions to ensure Seer receives cleanup notifications
-    # even if the PR was converted to draft before closing
+    # Allow CLOSED actions for draft PRs so Seer gets cleanup notifications
     if action != PullRequestAction.CLOSED and pull_request.get("draft") is True:
         return
 
     pr_number = pull_request.get("number")
     if pr_number and action in ACTIONS_ELIGIBLE_FOR_EYES_REACTION:
-        # We don't ever need to delete :eyes: since we later add it back to the PR description idempotently.
         reactions_to_delete = [GitHubReaction.HOORAY]
         if is_github_rate_limit_sensitive(organization.slug):
             reactions_to_delete = []

@@ -44,7 +44,6 @@ def schedule_task(
     target_commit_sha: str,
     event_record: Any | None = None,
 ) -> None:
-    """Transform and forward a webhook event to Seer for processing."""
     transformed_event = transform_webhook_to_codegen_request(
         github_event=github_event,
         github_event_action=github_event_action,
@@ -63,7 +62,6 @@ def schedule_task(
 
     trigger_id = getattr(event_record, "trigger_id", None) if event_record else None
 
-    # Convert enum to string for Celery serialization
     process_github_webhook_event.delay(
         github_event=github_event.value,
         event_payload=transformed_event,
@@ -88,16 +86,7 @@ def process_github_webhook_event(
     trigger_id: str | None = None,
     **kwargs: Any,
 ) -> None:
-    """
-    Process GitHub webhook event by forwarding to Seer if applicable.
-
-    Args:
-        enqueued_at_str: The timestamp when the task was enqueued
-        github_event: The GitHub webhook event type from X-GitHub-Event header (e.g., "check_run", "pull_request")
-        event_payload: The payload of the webhook event
-        trigger_id: Correlation ID for tracking the event through the pipeline
-        **kwargs: Parameters to pass to webhook handler functions
-    """
+    """Validate and forward webhook event payload to Seer."""
     event_record = find_event_by_trigger_id(trigger_id) if trigger_id else None
 
     status = "success"
@@ -105,10 +94,8 @@ def process_github_webhook_event(
     try:
         path = get_seer_endpoint_for_event(github_event).value
 
-        # Validate payload with Pydantic (except for CHECK_RUN events which use minimal payload)
+        # CHECK_RUN events use a minimal payload that doesn't need Pydantic validation
         if github_event != GithubWebhookType.CHECK_RUN:
-            # Parse with appropriate model based on request type to enforce
-            # organization_id and integration_id requirements for PR closed
             request_type = event_payload.get("request_type")
             validated_payload: (
                 SeerCodeReviewTaskRequestForPrClosed | SeerCodeReviewTaskRequestForPrReview
@@ -117,12 +104,8 @@ def process_github_webhook_event(
                 validated_payload = SeerCodeReviewTaskRequestForPrClosed.parse_obj(event_payload)
             else:
                 validated_payload = SeerCodeReviewTaskRequestForPrReview.parse_obj(event_payload)
-            # Convert to dict and handle enum keys (Pydantic v1 converts string keys to enums,
-            # but JSON requires string keys, so we need to convert them back)
+            # Pydantic v1 converts string keys to enums; convert back for JSON serialization
             payload = convert_enum_keys_to_strings(validated_payload.dict())
-            # When upgrading to Pydantic v2, we can remove the convert_enum_keys_to_strings call.
-            # Pydantic v2 will automatically convert enum keys to strings.
-            # payload = validated_payload.model_dump(mode="json")
         else:
             payload = event_payload
 

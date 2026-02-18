@@ -1,8 +1,3 @@
-"""
-Helper functions for creating and updating CodeReviewEvent records.
-These track the lifecycle of each webhook event through the code review pipeline.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -71,7 +66,6 @@ def create_event_record(
     status: str,
     denial_reason: str | None = None,
 ) -> CodeReviewEvent | None:
-    """Create a CodeReviewEvent record. Returns None if creation fails."""
     now = datetime.now(timezone.utc)
     pr_metadata = _extract_pr_metadata(trigger_event_type, event)
 
@@ -108,7 +102,6 @@ def update_event_status(
     *,
     denial_reason: str | None = None,
 ) -> None:
-    """Update the status of an existing CodeReviewEvent record."""
     if event_record is None:
         return
 
@@ -135,14 +128,12 @@ def update_event_status(
 
 
 def find_event_by_trigger_id(trigger_id: str) -> CodeReviewEvent | None:
-    """Find a CodeReviewEvent by trigger_id."""
     if not trigger_id:
         return None
     return CodeReviewEvent.objects.filter(trigger_id=trigger_id).first()
 
 
 def _status_to_timestamp_field(status: str) -> str | None:
-    """Map a status to its corresponding timestamp field."""
     return {
         CodeReviewEventStatus.WEBHOOK_RECEIVED: "webhook_received_at",
         CodeReviewEventStatus.PREFLIGHT_DENIED: "preflight_completed_at",
