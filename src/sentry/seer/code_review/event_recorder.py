@@ -130,6 +130,8 @@ def create_event_record(
 
     timestamp_field = _status_to_timestamp_field(status)
     timestamps = {timestamp_field: now} if timestamp_field else {}
+    # Always record webhook_received_at since we're processing a webhook
+    timestamps.setdefault("webhook_received_at", now)
 
     try:
         return CodeReviewEvent.objects.create(

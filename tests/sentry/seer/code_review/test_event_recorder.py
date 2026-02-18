@@ -110,6 +110,7 @@ class TestCreateEventRecord(TestCase):
         assert record.status == CodeReviewEventStatus.PREFLIGHT_DENIED
         assert record.denial_reason == "Feature not enabled"
         assert record.preflight_completed_at is not None
+        assert record.webhook_received_at is not None
         assert record.target_commit_sha == "denied123"
         assert record.pr_number == 10
 
