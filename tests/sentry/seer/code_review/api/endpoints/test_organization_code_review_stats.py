@@ -115,8 +115,10 @@ class OrganizationCodeReviewStatsTest(APITestCase):
 
     def test_repositories_unaffected_by_repo_filter(self) -> None:
         other_repo = self.create_repo(project=self.project, name="other/repo")
-        self._create_event(pr_number=1, repository_id=self.repo.id)
-        self._create_event(pr_number=2, repository_id=other_repo.id)
+        self._create_event(pr_number=1)
+        self.create_code_review_event(
+            organization=self.organization, repository=other_repo, pr_number=2
+        )
 
         with self.feature("organizations:pr-review-dashboard"):
             url = reverse(self.endpoint, args=[self.organization.slug])
@@ -163,13 +165,13 @@ class OrganizationCodeReviewStatsTest(APITestCase):
     def test_filters_by_repository_id(self) -> None:
         other_repo = self.create_repo(project=self.project, name="other/repo")
         self._create_event(
-            repository_id=self.repo.id,
             pr_number=1,
             status=CodeReviewEventStatus.REVIEW_COMPLETED,
             comments_posted=5,
         )
-        self._create_event(
-            repository_id=other_repo.id,
+        self.create_code_review_event(
+            organization=self.organization,
+            repository=other_repo,
             pr_number=2,
             status=CodeReviewEventStatus.REVIEW_COMPLETED,
             comments_posted=3,
