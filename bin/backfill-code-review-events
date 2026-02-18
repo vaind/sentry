@@ -205,6 +205,7 @@ def main():
             else CodeReviewEventStatus.SENT_TO_SEER
         )
 
+        fallback_dt = parse_dt(row.get("event_created_at"))
         pr_url = f"https://github.com/{repo_full_name}/pull/{pr_number}"
         info = pr_info_by_repo.get(repo_full_name, {}).get(int(pr_number))
         pr_title = info.title if info else None
@@ -238,14 +239,14 @@ def main():
                 trigger_id=trigger_id,
                 trigger=row.get("trigger", "").strip() or None,
                 trigger_user=row.get("trigger_user", "").strip() or None,
-                trigger_at=parse_dt(row.get("source_trigger_at")),
+                trigger_at=parse_dt(row.get("source_trigger_at")) or fallback_dt,
                 status=status,
                 seer_run_id=run_id,
                 comments_posted=comments_posted,
-                webhook_received_at=parse_dt(row.get("sentry_received_trigger_at")),
-                sent_to_seer_at=parse_dt(row.get("seer_received_at")),
-                review_started_at=parse_dt(row.get("started_at")),
-                review_completed_at=parse_dt(row.get("completed_at")),
+                webhook_received_at=parse_dt(row.get("sentry_received_trigger_at")) or fallback_dt,
+                sent_to_seer_at=parse_dt(row.get("seer_received_at")) or fallback_dt,
+                review_started_at=parse_dt(row.get("started_at")) or fallback_dt,
+                review_completed_at=parse_dt(row.get("completed_at")) or fallback_dt,
             )
             created += 1
         except Exception:
