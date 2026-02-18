@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from datetime import datetime
 from typing import Any, TypedDict
 
@@ -55,7 +55,7 @@ class CodeReviewEventSerializer(Serializer):
     def serialize(
         self,
         obj: CodeReviewEvent,
-        attrs: MutableMapping[str, Any],
+        attrs: Mapping[Any, Any],
         user: Any,
         **kwargs: Any,
     ) -> CodeReviewEventResponse:

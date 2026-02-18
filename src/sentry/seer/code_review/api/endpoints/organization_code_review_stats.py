@@ -11,6 +11,7 @@ from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 
 SKIPPED_STATUSES = Q(
@@ -26,7 +27,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         "GET": ApiPublishStatus.EXPERIMENTAL,
     }
 
-    def get(self, request: Request, organization) -> Response:
+    def get(self, request: Request, organization: Organization) -> Response:
         if not features.has("organizations:pr-review-dashboard", organization, actor=request.user):
             return Response(status=404)
 

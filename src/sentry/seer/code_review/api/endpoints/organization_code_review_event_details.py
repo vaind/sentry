@@ -11,6 +11,7 @@ from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.api.serializers import serialize
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.seer.code_review.api.serializers.code_review_event import CodeReviewEventSerializer
 
@@ -22,7 +23,9 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
         "GET": ApiPublishStatus.EXPERIMENTAL,
     }
 
-    def get(self, request: Request, organization, repo_id: str, pr_number: str) -> Response:
+    def get(
+        self, request: Request, organization: Organization, repo_id: str, pr_number: str
+    ) -> Response:
         if not features.has("organizations:pr-review-dashboard", organization, actor=request.user):
             return Response(status=404)
 

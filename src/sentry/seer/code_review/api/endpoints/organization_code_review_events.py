@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import Coalesce
 from rest_framework.request import Request
@@ -12,6 +14,7 @@ from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.api.paginator import OffsetPaginator
 from sentry.models.code_review_event import CodeReviewEvent
+from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 
 
@@ -22,7 +25,7 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
         "GET": ApiPublishStatus.EXPERIMENTAL,
     }
 
-    def get(self, request: Request, organization) -> Response:
+    def get(self, request: Request, organization: Organization) -> Response:
         if not features.has("organizations:pr-review-dashboard", organization, actor=request.user):
             return Response(status=404)
 
@@ -69,7 +72,9 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             on_results=lambda groups: self._enrich_groups(groups, queryset),
         )
 
-    def _enrich_groups(self, groups: list[dict], base_queryset) -> list[dict]:
+    def _enrich_groups(
+        self, groups: list[dict[str, Any]], base_queryset: Any
+    ) -> list[dict[str, Any]]:
         """Attach latest event metadata (title, author, status) to each PR group."""
         if not groups:
             return []

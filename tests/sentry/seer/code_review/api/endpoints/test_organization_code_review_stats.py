@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.urls import reverse
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
@@ -12,7 +14,7 @@ class OrganizationCodeReviewStatsTest(APITestCase):
         self.repo = self.create_repo(project=self.project, name="owner/repo")
         self.login_as(user=self.user)
 
-    def _create_event(self, **kwargs) -> CodeReviewEvent:
+    def _create_event(self, **kwargs: Any) -> CodeReviewEvent:
         return self.create_code_review_event(
             organization=self.organization,
             repository=self.repo,

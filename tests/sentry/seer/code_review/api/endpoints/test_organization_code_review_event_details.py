@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any
 
 from django.urls import reverse
 from django.utils import timezone
@@ -17,7 +18,7 @@ class OrganizationCodeReviewPRDetailsTest(APITestCase):
         )
         self.login_as(user=self.user)
 
-    def _create_event(self, **kwargs) -> CodeReviewEvent:
+    def _create_event(self, **kwargs: Any) -> CodeReviewEvent:
         kwargs.setdefault("pr_number", 42)
         return self.create_code_review_event(
             organization=self.organization,

@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -13,7 +15,7 @@ class OrganizationCodeReviewPRsTest(APITestCase):
         self.repo = self.create_repo(project=self.project, name="owner/repo")
         self.login_as(user=self.user)
 
-    def _create_event(self, **kwargs) -> CodeReviewEvent:
+    def _create_event(self, **kwargs: Any) -> CodeReviewEvent:
         kwargs.setdefault("pr_number", 42)
         return self.create_code_review_event(
             organization=self.organization,

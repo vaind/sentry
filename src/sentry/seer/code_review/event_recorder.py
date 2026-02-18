@@ -181,14 +181,17 @@ def find_event_by_trigger_id(trigger_id: str) -> CodeReviewEvent | None:
     return CodeReviewEvent.objects.filter(trigger_id=trigger_id).first()
 
 
+_STATUS_TIMESTAMP_MAP: dict[str, str] = {
+    CodeReviewEventStatus.WEBHOOK_RECEIVED: "webhook_received_at",
+    CodeReviewEventStatus.PREFLIGHT_DENIED: "preflight_completed_at",
+    CodeReviewEventStatus.WEBHOOK_FILTERED: "preflight_completed_at",
+    CodeReviewEventStatus.TASK_ENQUEUED: "task_enqueued_at",
+    CodeReviewEventStatus.SENT_TO_SEER: "sent_to_seer_at",
+    CodeReviewEventStatus.REVIEW_STARTED: "review_started_at",
+    CodeReviewEventStatus.REVIEW_COMPLETED: "review_completed_at",
+    CodeReviewEventStatus.REVIEW_FAILED: "review_completed_at",
+}
+
+
 def _status_to_timestamp_field(status: str) -> str | None:
-    return {
-        CodeReviewEventStatus.WEBHOOK_RECEIVED: "webhook_received_at",
-        CodeReviewEventStatus.PREFLIGHT_DENIED: "preflight_completed_at",
-        CodeReviewEventStatus.WEBHOOK_FILTERED: "preflight_completed_at",
-        CodeReviewEventStatus.TASK_ENQUEUED: "task_enqueued_at",
-        CodeReviewEventStatus.SENT_TO_SEER: "sent_to_seer_at",
-        CodeReviewEventStatus.REVIEW_STARTED: "review_started_at",
-        CodeReviewEventStatus.REVIEW_COMPLETED: "review_completed_at",
-        CodeReviewEventStatus.REVIEW_FAILED: "review_completed_at",
-    }.get(status)
+    return _STATUS_TIMESTAMP_MAP.get(status)
