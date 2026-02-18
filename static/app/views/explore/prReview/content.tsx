@@ -1,14 +1,17 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo} from 'react';
 
 import {Grid} from '@sentry/scraps/layout';
 
 import * as Layout from 'sentry/components/layouts/thirds';
 import {PageHeadingQuestionTooltip} from 'sentry/components/pageHeadingQuestionTooltip';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import {parseStatsPeriod} from 'sentry/components/timeRangeSelector/utils';
 import {t, tct} from 'sentry/locale';
 import {parseCursor} from 'sentry/utils/cursor';
 import {useApiQuery} from 'sentry/utils/queryClient';
+import {decodeList, decodeScalar} from 'sentry/utils/queryString';
 import {useLocation} from 'sentry/utils/useLocation';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import useOrganization from 'sentry/utils/useOrganization';
 import {PrReviewFilters} from 'sentry/views/explore/prReview/prReviewFilters';
 import {PrReviewList} from 'sentry/views/explore/prReview/prReviewList';
@@ -18,20 +21,14 @@ import type {
   CodeReviewStats as CodeReviewStatsType,
 } from 'sentry/views/explore/prReview/types';
 
-const TIME_RANGE_TO_MS: Record<string, number> = {
-  '24h': 24 * 60 * 60 * 1000,
-  '7d': 7 * 24 * 60 * 60 * 1000,
-  '14d': 14 * 24 * 60 * 60 * 1000,
-  '30d': 30 * 24 * 60 * 60 * 1000,
-  '90d': 90 * 24 * 60 * 60 * 1000,
-};
-
 export default function PrReviewContent() {
   const organization = useOrganization();
   const location = useLocation();
-  const [status, setStatus] = useState('');
-  const [repositoryIds, setRepositoryIds] = useState<string[]>([]);
-  const [timeRange, setTimeRange] = useState('14d');
+  const navigate = useNavigate();
+
+  const status = decodeScalar(location.query.status, '');
+  const repositoryIds = decodeList(location.query.repositoryId);
+  const timeRange = decodeScalar(location.query.timeRange, '14d');
 
   const queryParams: Record<string, string | string[]> = useMemo(() => {
     const params: Record<string, string | string[]> = {};
@@ -41,10 +38,7 @@ export default function PrReviewContent() {
     if (repositoryIds.length > 0) {
       params.repositoryId = repositoryIds;
     }
-    const ms = TIME_RANGE_TO_MS[timeRange];
-    if (ms) {
-      params.start = new Date(Date.now() - ms).toISOString();
-    }
+    params.start = parseStatsPeriod(timeRange).start;
     return params;
   }, [status, repositoryIds, timeRange]);
 
@@ -92,6 +86,44 @@ export default function PrReviewContent() {
     return tct('[start]-[end] of [total]', {start, end, total: totalHits});
   }, [totalHits, prs?.length, location.query.cursor]);
 
+  const handleStatusChange = useCallback(
+    (newStatus: string) => {
+      navigate({
+        ...location,
+        query: {...location.query, status: newStatus || undefined, cursor: undefined},
+      });
+    },
+    [location, navigate]
+  );
+
+  const handleRepositoryChange = useCallback(
+    (ids: string[]) => {
+      navigate({
+        ...location,
+        query: {
+          ...location.query,
+          repositoryId: ids.length > 0 ? ids : undefined,
+          cursor: undefined,
+        },
+      });
+    },
+    [location, navigate]
+  );
+
+  const handleTimeRangeChange = useCallback(
+    (range: string) => {
+      navigate({
+        ...location,
+        query: {
+          ...location.query,
+          timeRange: range === '14d' ? undefined : range,
+          cursor: undefined,
+        },
+      });
+    },
+    [location, navigate]
+  );
+
   return (
     <SentryDocumentTitle title={t('Seer PR Reviews')} orgSlug={organization.slug}>
       <Layout.Page>
@@ -114,9 +146,9 @@ export default function PrReviewContent() {
                 repositories={stats?.repositories ?? []}
                 status={status}
                 timeRange={timeRange}
-                onRepositoryChange={setRepositoryIds}
-                onStatusChange={setStatus}
-                onTimeRangeChange={setTimeRange}
+                onRepositoryChange={handleRepositoryChange}
+                onStatusChange={handleStatusChange}
+                onTimeRangeChange={handleTimeRangeChange}
               />
               <PrReviewStats stats={stats} statusFilter={status} timeRange={timeRange} />
               <PrReviewList

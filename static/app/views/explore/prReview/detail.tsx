@@ -214,7 +214,7 @@ function EventRow({event, prUrl}: {event: CodeReviewEvent; prUrl: string | null}
       <div>{event.triggerUser ?? '—'}</div>
       <div>
         {commitShort ? (
-          <Text size="sm" style={{fontFamily: 'monospace'}}>
+          <Text size="sm" monospace>
             {commitUrl ? (
               <ExternalLink href={commitUrl}>{commitShort}</ExternalLink>
             ) : (
