@@ -35,6 +35,10 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if repository_id:
             queryset = queryset.filter(repository_id=repository_id)
 
+        pr_state = request.GET.get("status")
+        if pr_state:
+            queryset = queryset.filter(pr_state=pr_state)
+
         queryset = queryset.annotate(event_time=Coalesce("trigger_at", "date_added"))
 
         start = request.GET.get("start")

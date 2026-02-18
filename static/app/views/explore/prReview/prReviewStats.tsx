@@ -6,12 +6,14 @@ import {ScoreCard} from 'sentry/components/scoreCard';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {CodeReviewStats} from 'sentry/views/explore/prReview/types';
+import {formatStatus} from 'sentry/views/explore/prReview/utils';
 
 interface Props {
   stats: CodeReviewStats | undefined;
+  statusFilter?: string;
 }
 
-export function PrReviewStats({stats}: Props) {
+export function PrReviewStats({stats, statusFilter}: Props) {
   const theme = useTheme();
 
   if (!stats) {
@@ -40,7 +42,7 @@ export function PrReviewStats({stats}: Props) {
     <StatsRow>
       <CardsSection>
         <StyledScoreCard
-          title={t('Total PRs')}
+          title={statusFilter ? t('%s PRs', formatStatus(statusFilter)) : t('Total PRs')}
           score={stats.stats.totalPrs}
           trend={t('%d skipped', stats.stats.skippedPrs)}
         />

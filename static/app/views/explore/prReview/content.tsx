@@ -39,7 +39,7 @@ export default function PrReviewContent() {
   );
 
   const {data: stats} = useApiQuery<CodeReviewStatsType>(
-    [`/organizations/${organization.slug}/code-review-stats/`],
+    [`/organizations/${organization.slug}/code-review-stats/`, {query: queryParams}],
     {staleTime: 60_000}
   );
 
@@ -68,7 +68,7 @@ export default function PrReviewContent() {
                 onStatusChange={setStatus}
                 onTriggerTypeChange={setTriggerType}
               />
-              <PrReviewStats stats={stats} />
+              <PrReviewStats stats={stats} statusFilter={status} />
               <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
             </Grid>
           </Layout.Main>
