@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import Count, Max, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -85,8 +85,6 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
         pr_keys = [(g["repository_id"], g["pr_number"]) for g in groups]
 
         # Single query to get latest event ID per (repository_id, pr_number)
-        from django.db.models import OuterRef, Subquery
-
         latest_ids_subquery = (
             base_queryset.filter(
                 repository_id=OuterRef("repository_id"),
