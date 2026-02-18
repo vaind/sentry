@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Coalesce
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.api.serializers import serialize
-from sentry.models.code_review_event import CodeReviewEvent
+from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.repository import Repository
 from sentry.seer.code_review.api.serializers.code_review_event import CodeReviewEventSerializer
 from sentry.seer.code_review.rpc_queries import get_pr_comments
@@ -72,6 +73,32 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
 
         comments, comments_error = _fetch_pr_comments(repo_id_int, pr_number_int)
 
+        summary = events.aggregate(
+            total_reviews=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_COMPLETED)),
+            total_failed=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_FAILED)),
+            total_skipped=Count(
+                "id",
+                filter=Q(
+                    status__in=[
+                        CodeReviewEventStatus.PREFLIGHT_DENIED,
+                        CodeReviewEventStatus.WEBHOOK_FILTERED,
+                    ]
+                ),
+            ),
+            total_comments=Sum("comments_posted"),
+            avg_review_duration=Avg(
+                F("review_completed_at") - F("sent_to_seer_at"),
+                filter=Q(
+                    review_completed_at__isnull=False,
+                    sent_to_seer_at__isnull=False,
+                ),
+            ),
+        )
+
+        avg_duration_ms = None
+        if summary["avg_review_duration"] is not None:
+            avg_duration_ms = int(summary["avg_review_duration"].total_seconds() * 1000)
+
         return Response(
             {
                 "repositoryId": str(repo_id_int),
@@ -84,5 +111,12 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
                 "events": serialize(list(events), request.user, CodeReviewEventSerializer()),
                 "comments": comments,
                 "commentsError": comments_error,
+                "summary": {
+                    "totalReviews": summary["total_reviews"],
+                    "totalFailed": summary["total_failed"],
+                    "totalSkipped": summary["total_skipped"],
+                    "totalComments": summary["total_comments"] or 0,
+                    "avgReviewDurationMs": avg_duration_ms,
+                },
             }
         )

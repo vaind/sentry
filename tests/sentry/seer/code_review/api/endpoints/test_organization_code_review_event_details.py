@@ -1,6 +1,8 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.urls import reverse
+from django.utils import timezone
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.testutils.cases import APITestCase
@@ -132,3 +134,51 @@ class OrganizationCodeReviewPRDetailsTest(APITestCase):
         event_ids = [e["id"] for e in response.data["events"]]
         # Most recent first (e2 was created after e1)
         assert event_ids == [str(e2.id), str(e1.id)]
+
+    @patch(
+        "sentry.seer.code_review.api.endpoints.organization_code_review_event_details.get_pr_comments"
+    )
+    def test_returns_summary(self, mock_get_comments) -> None:
+        mock_get_comments.return_value = []
+        now = timezone.now()
+
+        self._create_event(
+            pr_number=42,
+            status=CodeReviewEventStatus.REVIEW_COMPLETED,
+            comments_posted=3,
+            sent_to_seer_at=now - timedelta(seconds=10),
+            review_completed_at=now,
+        )
+        self._create_event(
+            pr_number=42,
+            status=CodeReviewEventStatus.REVIEW_COMPLETED,
+            comments_posted=1,
+            sent_to_seer_at=now - timedelta(seconds=20),
+            review_completed_at=now,
+        )
+        self._create_event(
+            pr_number=42,
+            status=CodeReviewEventStatus.REVIEW_FAILED,
+        )
+        self._create_event(
+            pr_number=42,
+            status=CodeReviewEventStatus.PREFLIGHT_DENIED,
+            denial_reason="pr_too_large",
+        )
+        self._create_event(
+            pr_number=42,
+            status=CodeReviewEventStatus.WEBHOOK_FILTERED,
+        )
+
+        with self.feature("organizations:pr-review-dashboard"):
+            url = reverse(self.endpoint, args=[self.organization.slug, self.repo.id, 42])
+            response = self.client.get(url)
+
+        assert response.status_code == 200
+        summary = response.data["summary"]
+        assert summary["totalReviews"] == 2
+        assert summary["totalFailed"] == 1
+        assert summary["totalSkipped"] == 2
+        assert summary["totalComments"] == 4
+        # avg of 10s and 20s = 15s = 15000ms
+        assert summary["avgReviewDurationMs"] == 15000

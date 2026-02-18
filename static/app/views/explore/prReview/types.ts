@@ -42,6 +42,14 @@ export interface CodeReviewPR {
   totalComments: number;
 }
 
+export interface CodeReviewPRSummary {
+  avgReviewDurationMs: number | null;
+  totalComments: number;
+  totalFailed: number;
+  totalReviews: number;
+  totalSkipped: number;
+}
+
 export interface CodeReviewPRDetails {
   comments: CodeReviewComment[];
   commentsError: boolean;
@@ -53,6 +61,7 @@ export interface CodeReviewPRDetails {
   prUrl: string | null;
   repositoryId: string;
   repositoryName: string | null;
+  summary: CodeReviewPRSummary;
 }
 
 export interface CodeReviewComment {

@@ -16,6 +16,11 @@ describe('PrReviewContent', () => {
       totalReviews: 15,
       totalComments: 25,
       skippedPrs: 2,
+      totalAuthors: 3,
+      topAuthors: [
+        {author: 'testuser', prCount: 5},
+        {author: 'otheruser', prCount: 3},
+      ],
     },
     timeSeries: [],
   };
