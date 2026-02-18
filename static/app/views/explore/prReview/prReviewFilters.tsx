@@ -1,16 +1,18 @@
 import {CompactSelect} from '@sentry/scraps/compactSelect';
-import {Flex} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 
+import PageFilterBar from 'sentry/components/pageFilters/pageFilterBar';
 import {t} from 'sentry/locale';
 import type {CodeReviewRepository} from 'sentry/views/explore/prReview/types';
 
 interface Props {
   onRepositoryChange: (repositoryIds: string[]) => void;
   onStatusChange: (status: string) => void;
+  onTimeRangeChange: (timeRange: string) => void;
   repositories: CodeReviewRepository[];
   repositoryIds: string[];
   status: string;
+  timeRange: string;
 }
 
 const STATUS_OPTIONS = [
@@ -20,12 +22,37 @@ const STATUS_OPTIONS = [
   {value: 'closed', label: t('Closed')},
 ];
 
+const TIME_RANGE_OPTIONS = [
+  {value: '24h', label: t('24H')},
+  {value: '7d', label: t('7D')},
+  {value: '14d', label: t('14D')},
+  {value: '30d', label: t('30D')},
+  {value: '90d', label: t('90D')},
+];
+
+function getRepoTriggerLabel(
+  repositoryIds: string[],
+  repositories: CodeReviewRepository[]
+): string {
+  if (repositoryIds.length === 0) {
+    return t('All Repositories');
+  }
+  const selected = repositories.find(r => r.id === repositoryIds[0]);
+  const label = selected?.name ?? repositoryIds[0];
+  if (repositoryIds.length === 1) {
+    return label;
+  }
+  return `${label} (+${repositoryIds.length - 1})`;
+}
+
 export function PrReviewFilters({
   status,
   repositoryIds,
   repositories,
+  timeRange,
   onStatusChange,
   onRepositoryChange,
+  onTimeRangeChange,
 }: Props) {
   const repoOptions = repositories.map(repo => ({
     value: repo.id,
@@ -34,26 +61,40 @@ export function PrReviewFilters({
   }));
 
   return (
-    <Flex gap="md">
+    <PageFilterBar condensed>
+      <CompactSelect
+        multiple
+        searchable
+        searchPlaceholder={t('Search...')}
+        trigger={triggerProps => (
+          <OverlayTrigger.Button {...triggerProps}>
+            {getRepoTriggerLabel(repositoryIds, repositories)}
+          </OverlayTrigger.Button>
+        )}
+        value={repositoryIds}
+        options={repoOptions}
+        onChange={opts => onRepositoryChange(opts.map(o => o.value))}
+      />
       <CompactSelect
         trigger={triggerProps => (
-          <OverlayTrigger.Button {...triggerProps} prefix={t('Status')} />
+          <OverlayTrigger.Button {...triggerProps}>
+            {STATUS_OPTIONS.find(o => o.value === status)?.label ?? t('All Statuses')}
+          </OverlayTrigger.Button>
         )}
         value={status}
         options={STATUS_OPTIONS}
         onChange={opt => onStatusChange(opt.value)}
       />
       <CompactSelect
-        multiple
-        searchable
-        searchPlaceholder={t('Search repositories...')}
         trigger={triggerProps => (
-          <OverlayTrigger.Button {...triggerProps} prefix={t('Repository')} />
+          <OverlayTrigger.Button {...triggerProps}>
+            {TIME_RANGE_OPTIONS.find(o => o.value === timeRange)?.label ?? timeRange}
+          </OverlayTrigger.Button>
         )}
-        value={repositoryIds}
-        options={repoOptions}
-        onChange={opts => onRepositoryChange(opts.map(o => o.value))}
+        value={timeRange}
+        options={TIME_RANGE_OPTIONS}
+        onChange={opt => onTimeRangeChange(opt.value)}
       />
-    </Flex>
+    </PageFilterBar>
   );
 }

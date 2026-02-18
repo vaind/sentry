@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useMemo, useState} from 'react';
 
 import {Grid} from '@sentry/scraps/layout';
 
@@ -16,18 +16,34 @@ import type {
   CodeReviewStats as CodeReviewStatsType,
 } from 'sentry/views/explore/prReview/types';
 
+const TIME_RANGE_TO_MS: Record<string, number> = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '14d': 14 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+  '90d': 90 * 24 * 60 * 60 * 1000,
+};
+
 export default function PrReviewContent() {
   const organization = useOrganization();
   const [status, setStatus] = useState('');
   const [repositoryIds, setRepositoryIds] = useState<string[]>([]);
+  const [timeRange, setTimeRange] = useState('14d');
 
-  const queryParams: Record<string, string | string[]> = {};
-  if (status) {
-    queryParams.status = status;
-  }
-  if (repositoryIds.length > 0) {
-    queryParams.repositoryId = repositoryIds;
-  }
+  const queryParams: Record<string, string | string[]> = useMemo(() => {
+    const params: Record<string, string | string[]> = {};
+    if (status) {
+      params.status = status;
+    }
+    if (repositoryIds.length > 0) {
+      params.repositoryId = repositoryIds;
+    }
+    const ms = TIME_RANGE_TO_MS[timeRange];
+    if (ms) {
+      params.start = new Date(Date.now() - ms).toISOString();
+    }
+    return params;
+  }, [status, repositoryIds, timeRange]);
 
   const {
     data: prs,
@@ -63,11 +79,13 @@ export default function PrReviewContent() {
           <Layout.Main width="full">
             <Grid gap="xl" columns="100%">
               <PrReviewFilters
-                status={status}
                 repositoryIds={repositoryIds}
                 repositories={stats?.repositories ?? []}
-                onStatusChange={setStatus}
+                status={status}
+                timeRange={timeRange}
                 onRepositoryChange={setRepositoryIds}
+                onStatusChange={setStatus}
+                onTimeRangeChange={setTimeRange}
               />
               <PrReviewStats stats={stats} statusFilter={status} />
               <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
