@@ -32,6 +32,7 @@ def _extract_pr_metadata(
     pr_author = None
     pr_url = None
     pr_state = None
+    target_commit_sha = None
 
     if trigger_event_type == "pull_request":
         pr = event.get("pull_request", {})
@@ -40,6 +41,7 @@ def _extract_pr_metadata(
         pr_author = pr.get("user", {}).get("login")
         pr_url = pr.get("html_url")
         pr_state = _extract_pr_state(pr)
+        target_commit_sha = pr.get("head", {}).get("sha")
     elif trigger_event_type == "issue_comment":
         issue = event.get("issue", {})
         pr_number = issue.get("number")
@@ -54,6 +56,7 @@ def _extract_pr_metadata(
         "pr_author": pr_author,
         "pr_url": pr_url,
         "pr_state": pr_state,
+        "target_commit_sha": target_commit_sha,
     }
 
 

@@ -17,6 +17,7 @@ class TestCreateEventRecord(TestCase):
                 "user": {"login": "testuser"},
                 "html_url": "https://github.com/owner/repo/pull/42",
                 "updated_at": "2026-01-15T10:30:00Z",
+                "head": {"sha": "abc123def456"},
             },
             "sender": {"login": "triggeruser"},
         }
@@ -44,6 +45,7 @@ class TestCreateEventRecord(TestCase):
         assert record.trigger == "pr_opened"
         assert record.trigger_user == "triggeruser"
         assert record.trigger_at is not None
+        assert record.target_commit_sha == "abc123def456"
         assert record.status == CodeReviewEventStatus.WEBHOOK_RECEIVED
         assert record.webhook_received_at is not None
 
@@ -91,7 +93,15 @@ class TestCreateEventRecord(TestCase):
             trigger_event_type="pull_request",
             trigger_event_action="opened",
             trigger_id="ghi-789",
-            event={"pull_request": {}},
+            event={
+                "pull_request": {
+                    "number": 10,
+                    "title": "Denied PR",
+                    "user": {"login": "author"},
+                    "html_url": "https://github.com/owner/repo/pull/10",
+                    "head": {"sha": "denied123"},
+                },
+            },
             status=CodeReviewEventStatus.PREFLIGHT_DENIED,
             denial_reason="Feature not enabled",
         )
@@ -100,6 +110,8 @@ class TestCreateEventRecord(TestCase):
         assert record.status == CodeReviewEventStatus.PREFLIGHT_DENIED
         assert record.denial_reason == "Feature not enabled"
         assert record.preflight_completed_at is not None
+        assert record.target_commit_sha == "denied123"
+        assert record.pr_number == 10
 
     def test_returns_none_on_duplicate_delivery_id(self) -> None:
         repo = self.create_repo(project=self.project)
