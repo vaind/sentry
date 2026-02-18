@@ -172,7 +172,10 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
           tooltip={{trigger: 'axis'}}
           grid={{top: '36px', bottom: '0', left: '0', right: '0', containLabel: true}}
           yAxis={{
-            axisLabel: {show: false},
+            axisLabel: {
+              color: theme.tokens.content.secondary,
+              fontFamily: theme.font.family.sans,
+            },
             splitLine: {show: false},
           }}
         />
