@@ -41,7 +41,7 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
         latest_event = events[0]
 
         try:
-            repo = Repository.objects.get(id=repo_id_int)
+            repo = Repository.objects.get(id=repo_id_int, organization_id=organization.id)
             repo_name = repo.name
         except Repository.DoesNotExist:
             repo_name = None
