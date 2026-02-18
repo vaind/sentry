@@ -93,12 +93,12 @@ export default function PrReviewContent() {
   }, [totalHits, prs?.length, location.query.cursor]);
 
   return (
-    <SentryDocumentTitle title={t('PR Reviews')} orgSlug={organization.slug}>
+    <SentryDocumentTitle title={t('Seer PR Reviews')} orgSlug={organization.slug}>
       <Layout.Page>
         <Layout.Header unified>
           <Layout.HeaderContent unified>
             <Layout.Title>
-              {t('PR Reviews')}
+              {t('Seer PR Reviews')}
               <PageHeadingQuestionTooltip
                 docsUrl="https://docs.sentry.io/product/ai-in-sentry/seer/ai-code-review/"
                 title={t('Monitor automated code reviews on your pull requests.')}

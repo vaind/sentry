@@ -143,7 +143,7 @@ export function ExploreSecondaryNav() {
               to={`${baseUrl}/pr-review/`}
               analyticsItemName="explore_pr_review"
             >
-              {t('PR Reviews')}
+              {t('Seer PR Reviews')}
             </SecondaryNav.Item>
           </Feature>
           <SecondaryNav.Item
