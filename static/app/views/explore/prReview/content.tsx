@@ -100,7 +100,7 @@ export default function PrReviewContent() {
             <Layout.Title>
               {t('PR Reviews')}
               <PageHeadingQuestionTooltip
-                docsUrl="https://docs.sentry.io/product/explore/pr-reviews/"
+                docsUrl="https://docs.sentry.io/product/ai-in-sentry/seer/ai-code-review/"
                 title={t('Monitor automated code reviews on your pull requests.')}
               />
             </Layout.Title>
