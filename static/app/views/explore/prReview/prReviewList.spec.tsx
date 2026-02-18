@@ -24,44 +24,63 @@ describe('PrReviewList', () => {
   };
 
   it('renders PRs in the table', () => {
-    render(<PrReviewList prs={[mockPR]} isLoading={false} pageLinks={null} />, {
-      organization,
-    });
+    render(
+      <PrReviewList
+        prs={[mockPR]}
+        isLoading={false}
+        pageLinks={null}
+        paginationCaption={null}
+      />,
+      {organization}
+    );
 
-    expect(screen.getByText('owner/repo')).toBeInTheDocument();
-    expect(screen.getByText('#42')).toBeInTheDocument();
+    expect(screen.getByText(/owner\/repo/)).toBeInTheDocument();
     expect(screen.getByText('Fix the bug')).toBeInTheDocument();
     expect(screen.getByText('Review Completed')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('renders empty message when no PRs', () => {
-    render(<PrReviewList prs={[]} isLoading={false} pageLinks={null} />, {
-      organization,
-    });
+    render(
+      <PrReviewList
+        prs={[]}
+        isLoading={false}
+        pageLinks={null}
+        paginationCaption={null}
+      />,
+      {organization}
+    );
 
     expect(screen.getByText('No pull requests found.')).toBeInTheDocument();
   });
 
   it('renders loading state', () => {
-    render(<PrReviewList prs={undefined} isLoading pageLinks={null} />, {
-      organization,
-    });
+    render(
+      <PrReviewList
+        prs={undefined}
+        isLoading
+        pageLinks={null}
+        paginationCaption={null}
+      />,
+      {organization}
+    );
 
     expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
   });
 
   it('renders table headers', () => {
-    render(<PrReviewList prs={[mockPR]} isLoading={false} pageLinks={null} />, {
-      organization,
-    });
+    render(
+      <PrReviewList
+        prs={[mockPR]}
+        isLoading={false}
+        pageLinks={null}
+        paginationCaption={null}
+      />,
+      {organization}
+    );
 
-    expect(screen.getByText('Repository')).toBeInTheDocument();
-    expect(screen.getByText('PR #')).toBeInTheDocument();
-    expect(screen.getByText('Title')).toBeInTheDocument();
-    expect(screen.getByText('Author')).toBeInTheDocument();
-    expect(screen.getByText('PR Status')).toBeInTheDocument();
-    expect(screen.getByText('Review Status')).toBeInTheDocument();
+    expect(screen.getByText('Pull Request')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Reviews')).toBeInTheDocument();
     expect(screen.getByText('Comments')).toBeInTheDocument();
     expect(screen.getByText('Last Activity')).toBeInTheDocument();

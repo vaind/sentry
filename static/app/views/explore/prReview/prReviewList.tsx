@@ -14,9 +14,9 @@ import TimeSince from 'sentry/components/timeSince';
 import {IconOpen} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
+import normalizeUrl from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import useOrganization from 'sentry/utils/useOrganization';
-import {normalizeUrl} from 'sentry/utils/withDomainRequired';
 import type {CodeReviewPR} from 'sentry/views/explore/prReview/types';
 import {
   formatStatus,
