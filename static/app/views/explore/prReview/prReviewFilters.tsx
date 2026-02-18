@@ -2,6 +2,7 @@ import {CompactSelect} from '@sentry/scraps/compactSelect';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 
 import PageFilterBar from 'sentry/components/pageFilters/pageFilterBar';
+import {DEFAULT_RELATIVE_PERIODS} from 'sentry/constants';
 import {t} from 'sentry/locale';
 import type {CodeReviewRepository} from 'sentry/views/explore/prReview/types';
 
@@ -22,13 +23,9 @@ const STATUS_OPTIONS = [
   {value: 'closed', label: t('Closed')},
 ];
 
-const TIME_RANGE_OPTIONS = [
-  {value: '24h', label: t('24H')},
-  {value: '7d', label: t('7D')},
-  {value: '14d', label: t('14D')},
-  {value: '30d', label: t('30D')},
-  {value: '90d', label: t('90D')},
-];
+const TIME_RANGE_OPTIONS = Object.entries(DEFAULT_RELATIVE_PERIODS)
+  .filter(([key]) => key !== '1h')
+  .map(([value, label]) => ({value, label}));
 
 function getRepoTriggerLabel(
   repositoryIds: string[],

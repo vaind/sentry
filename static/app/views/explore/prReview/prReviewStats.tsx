@@ -2,6 +2,9 @@ import {useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
+import {Flex, Grid} from '@sentry/scraps/layout';
+import {Text} from '@sentry/scraps/text';
+
 import {BarChart} from 'sentry/components/charts/barChart';
 import Legend from 'sentry/components/charts/components/legend';
 import {ScoreCard, ScorePanel} from 'sentry/components/scoreCard';
@@ -116,8 +119,8 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
   }
 
   return (
-    <StatsSection>
-      <CardsRow>
+    <Grid gap="md">
+      <Grid columns="repeat(3, 1fr)" gap="md">
         <StyledScoreCard
           title={statusFilter ? t('%s PRs', formatStatus(statusFilter)) : t('Total PRs')}
           score={stats.stats.totalPrs}
@@ -129,24 +132,32 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
           trend={t('%d comments posted', stats.stats.totalComments)}
         />
         <AuthorsCard>
-          <AuthorsHeader>
-            <AuthorsTitle>{t('Authors')}</AuthorsTitle>
-            <TopAuthorsLabel>{t('Top Authors')}</TopAuthorsLabel>
-          </AuthorsHeader>
-          <AuthorsBody>
+          <Flex align="baseline" justify="between">
+            <Text size="lg" bold>
+              {t('Authors')}
+            </Text>
+            <Text size="xs" bold uppercase variant="muted">
+              {t('Top Authors')}
+            </Text>
+          </Flex>
+          <Flex align="end" justify="between" gap="md">
             <AuthorsCount>{stats.stats.totalAuthors}</AuthorsCount>
             <TopAuthors>
               {stats.stats.topAuthors.map(({author, prCount}) => (
-                <AuthorLine key={author}>
-                  <AuthorName>{author}</AuthorName>
-                  <span>{tn('%s PR', '%s PRs', prCount)}</span>
-                </AuthorLine>
+                <Flex key={author} gap="sm" justify="end">
+                  <Text as="span" size="sm">
+                    {author}
+                  </Text>
+                  <Text as="span" size="sm" variant="muted">
+                    {tn('%s PR', '%s PRs', prCount)}
+                  </Text>
+                </Flex>
               ))}
             </TopAuthors>
-          </AuthorsBody>
+          </Flex>
         </AuthorsCard>
-      </CardsRow>
-      <ChartWrapper>
+      </Grid>
+      <div style={{minWidth: 0}}>
         <BarChart
           height={200}
           series={series}
@@ -178,25 +189,10 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
             splitLine: {show: false},
           }}
         />
-      </ChartWrapper>
-    </StatsSection>
+      </div>
+    </Grid>
   );
 }
-
-const StatsSection = styled('div')`
-  display: grid;
-  gap: ${space(2)};
-`;
-
-const CardsRow = styled('div')`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: ${space(2)};
-`;
-
-const ChartWrapper = styled('div')`
-  min-width: 0;
-`;
 
 const StyledScoreCard = styled(ScoreCard)`
   margin: 0;
@@ -204,25 +200,6 @@ const StyledScoreCard = styled(ScoreCard)`
 
 const AuthorsCard = styled(ScorePanel)`
   margin: 0;
-`;
-
-const AuthorsHeader = styled('div')`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-`;
-
-const AuthorsTitle = styled('div')`
-  font-size: ${p => p.theme.font.size.lg};
-  color: ${p => p.theme.tokens.content.primary};
-  font-weight: ${p => p.theme.font.weight.sans.medium};
-`;
-
-const AuthorsBody = styled('div')`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: ${space(2)};
 `;
 
 const AuthorsCount = styled('span')`
@@ -236,24 +213,4 @@ const TopAuthors = styled('div')`
   flex-direction: column;
   gap: ${space(0.25)};
   text-align: right;
-`;
-
-const AuthorLine = styled('div')`
-  display: flex;
-  gap: ${space(1)};
-  justify-content: flex-end;
-  font-size: ${p => p.theme.font.size.sm};
-  color: ${p => p.theme.tokens.content.secondary};
-  line-height: 1.4;
-`;
-
-const TopAuthorsLabel = styled('div')`
-  font-size: ${p => p.theme.font.size.xs};
-  font-weight: ${p => p.theme.font.weight.sans.medium};
-  color: ${p => p.theme.tokens.content.secondary};
-  text-transform: uppercase;
-`;
-
-const AuthorName = styled('span')`
-  color: ${p => p.theme.tokens.content.primary};
 `;
