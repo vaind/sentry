@@ -34,7 +34,7 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
 
         status = request.GET.get("status")
         if status:
-            queryset = queryset.filter(status=status)
+            queryset = queryset.filter(pr_state=status)
 
         trigger_type = request.GET.get("triggerType")
         if trigger_type:

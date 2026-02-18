@@ -13,14 +13,9 @@ interface Props {
 
 const STATUS_OPTIONS = [
   {value: '', label: t('All Statuses')},
-  {value: 'webhook_received', label: t('Webhook Received')},
-  {value: 'preflight_denied', label: t('Preflight Denied')},
-  {value: 'webhook_filtered', label: t('Filtered')},
-  {value: 'task_enqueued', label: t('Task Enqueued')},
-  {value: 'sent_to_seer', label: t('Sent to Seer')},
-  {value: 'review_started', label: t('Review Started')},
-  {value: 'review_completed', label: t('Review Completed')},
-  {value: 'review_failed', label: t('Review Failed')},
+  {value: 'open', label: t('Open')},
+  {value: 'merged', label: t('Merged')},
+  {value: 'closed', label: t('Closed')},
 ];
 
 const TRIGGER_OPTIONS = [

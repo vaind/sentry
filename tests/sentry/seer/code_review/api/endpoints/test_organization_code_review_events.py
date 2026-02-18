@@ -91,13 +91,14 @@ class OrganizationCodeReviewPRsTest(APITestCase):
         assert pr["latestStatus"] == "review_completed"
         assert pr["latestTrigger"] == "on_new_commit"
 
-    def test_filters_by_status(self) -> None:
-        self._create_event(pr_number=1, status=CodeReviewEventStatus.REVIEW_COMPLETED)
-        self._create_event(pr_number=2, status=CodeReviewEventStatus.REVIEW_FAILED)
+    def test_filters_by_pr_state(self) -> None:
+        self._create_event(pr_number=1, pr_state="open")
+        self._create_event(pr_number=2, pr_state="merged")
+        self._create_event(pr_number=3, pr_state="closed")
 
         with self.feature("organizations:pr-review-dashboard"):
             url = reverse(self.endpoint, args=[self.organization.slug])
-            response = self.client.get(url, {"status": "review_completed"})
+            response = self.client.get(url, {"status": "open"})
 
         assert response.status_code == 200
         assert len(response.data) == 1
