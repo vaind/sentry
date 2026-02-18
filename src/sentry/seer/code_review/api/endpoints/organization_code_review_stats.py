@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from django.db.models import Count, Q, Sum
-from django.db.models.functions import Coalesce, TruncDay
+from django.db.models import CharField, Count, Q, Sum, Value
+from django.db.models.functions import Cast, Coalesce, Concat, TruncDay, TruncHour
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -83,15 +83,27 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
             if pr["has_skipped"] > 0 and pr["has_reviewed"] == 0:
                 skipped_prs += 1
 
+        interval = request.GET.get("interval", "1d")
+        trunc_fn = TruncHour if interval == "1h" else TruncDay
+
         time_series = (
-            queryset.annotate(day=TruncDay("event_time"))
-            .values("day")
+            queryset.annotate(bucket=trunc_fn("event_time"))
+            .values("bucket")
             .annotate(
+                prs=Count(
+                    Concat(
+                        Cast("repository_id", output_field=CharField()),
+                        Value("-"),
+                        Cast("pr_number", output_field=CharField()),
+                    ),
+                    distinct=True,
+                    filter=Q(pr_number__isnull=False),
+                ),
                 reviewed=Count("id", filter=REVIEWED_STATUSES),
                 skipped=Count("id", filter=SKIPPED_STATUSES),
                 comments=Coalesce(Sum("comments_posted", filter=REVIEWED_STATUSES), 0),
             )
-            .order_by("day")
+            .order_by("bucket")
         )
 
         return Response(
@@ -105,7 +117,8 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
                 },
                 "timeSeries": [
                     {
-                        "date": entry["day"].isoformat(),
+                        "date": entry["bucket"].isoformat(),
+                        "prs": entry["prs"],
                         "reviewed": entry["reviewed"],
                         "skipped": entry["skipped"],
                         "comments": entry["comments"],

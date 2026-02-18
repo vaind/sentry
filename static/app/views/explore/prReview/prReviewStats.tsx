@@ -1,46 +1,123 @@
+import {useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
-import MiniBarChart from 'sentry/components/charts/miniBarChart';
+import {BarChart} from 'sentry/components/charts/barChart';
+import Legend from 'sentry/components/charts/components/legend';
 import {ScoreCard} from 'sentry/components/scoreCard';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
+import {getFormattedDate} from 'sentry/utils/dates';
 import type {CodeReviewStats} from 'sentry/views/explore/prReview/types';
 import {formatStatus} from 'sentry/views/explore/prReview/utils';
 
+const LABEL_INTERVAL: Record<string, number> = {
+  '24h': 2,
+  '7d': 0,
+  '14d': 0,
+  '30d': 2,
+  '90d': 6,
+};
+
 interface Props {
   stats: CodeReviewStats | undefined;
+  timeRange: string;
   statusFilter?: string;
 }
 
-export function PrReviewStats({stats, statusFilter}: Props) {
+function generateDateRange(timeRange: string): Date[] {
+  const dates: Date[] = [];
+  const now = new Date();
+
+  if (timeRange === '24h') {
+    for (let i = 23; i >= 0; i--) {
+      const date = new Date(now);
+      date.setHours(date.getHours() - i, 0, 0, 0);
+      dates.push(date);
+    }
+  } else {
+    const days: Record<string, number> = {
+      '7d': 7,
+      '14d': 14,
+      '30d': 30,
+      '90d': 90,
+    };
+    const count = days[timeRange] ?? 14;
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      dates.push(date);
+    }
+  }
+
+  return dates;
+}
+
+function toBucketKey(dateStr: string, hourly: boolean): string {
+  // For hourly: "2026-02-18T14" — for daily: "2026-02-18"
+  return hourly ? dateStr.slice(0, 13) : dateStr.slice(0, 10);
+}
+
+export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
   const theme = useTheme();
+
+  const hourly = timeRange === '24h';
+
+  const {series, xAxisLabels} = useMemo(() => {
+    if (!stats) {
+      return {series: [], xAxisLabels: []};
+    }
+
+    const dataByDate = new Map<string, (typeof stats.timeSeries)[0]>();
+    for (const entry of stats.timeSeries) {
+      dataByDate.set(toBucketKey(entry.date, hourly), entry);
+    }
+
+    const allDates = generateDateRange(timeRange);
+    const labelFormat = hourly ? 'LT' : 'MMM D';
+    const labels = allDates.map(d => getFormattedDate(d, labelFormat, {local: true}));
+
+    type TimeSeriesEntry = CodeReviewStats['timeSeries'][0];
+    const empty: TimeSeriesEntry = {
+      prs: 0,
+      reviewed: 0,
+      skipped: 0,
+      comments: 0,
+      date: '',
+    };
+
+    const makeSeries = (
+      name: string,
+      getValue: (entry: TimeSeriesEntry) => number,
+      stack?: string
+    ) => ({
+      seriesName: name,
+      ...(stack ? {stack} : {}),
+      data: allDates.map((d, i) => {
+        const key = toBucketKey(d.toISOString(), hourly);
+        return {name: labels[i]!, value: getValue(dataByDate.get(key) ?? empty)};
+      }),
+    });
+
+    return {
+      xAxisLabels: labels,
+      series: [
+        makeSeries(t('PRs'), e => e.prs, 'prs'),
+        makeSeries(t('Skipped'), e => e.skipped, 'prs'),
+        makeSeries(t('Reviews'), e => e.reviewed),
+        makeSeries(t('Comments'), e => e.comments),
+      ],
+    };
+  }, [stats, timeRange, hourly]);
 
   if (!stats) {
     return null;
   }
 
-  const series = [
-    {
-      seriesName: t('Reviewed'),
-      color: theme.colors.green400,
-      data: stats.timeSeries.map(d => ({name: d.date, value: d.reviewed})),
-    },
-    {
-      seriesName: t('Skipped'),
-      color: theme.colors.yellow400,
-      data: stats.timeSeries.map(d => ({name: d.date, value: d.skipped})),
-    },
-    {
-      seriesName: t('Comments'),
-      color: theme.colors.blue400,
-      data: stats.timeSeries.map(d => ({name: d.date, value: d.comments})),
-    },
-  ];
-
   return (
-    <StatsRow>
-      <CardsSection>
+    <StatsSection>
+      <CardsRow>
         <StyledScoreCard
           title={statusFilter ? t('%s PRs', formatStatus(statusFilter)) : t('Total PRs')}
           score={stats.stats.totalPrs}
@@ -51,35 +128,55 @@ export function PrReviewStats({stats, statusFilter}: Props) {
           score={stats.stats.totalReviews}
           trend={t('%d comments posted', stats.stats.totalComments)}
         />
-      </CardsSection>
-      <ChartSection>
-        <MiniBarChart
-          height={96}
+      </CardsRow>
+      <ChartWrapper>
+        <BarChart
+          height={200}
           series={series}
-          stacked
-          isGroupedByDate
-          showTimeInTooltip
+          legend={Legend({
+            right: 0,
+            top: 0,
+            data: series.map(s => ({name: s.seriesName})),
+            theme,
+          })}
+          xAxis={{
+            type: 'category',
+            data: xAxisLabels,
+            axisTick: {alignWithLabel: true},
+            axisLabel: {
+              interval: LABEL_INTERVAL[timeRange] ?? 0,
+              showMinLabel: true,
+              showMaxLabel: true,
+              formatter: (value: string) => value,
+              color: theme.tokens.content.secondary,
+              fontFamily: theme.font.family.sans,
+            },
+          }}
+          tooltip={{trigger: 'axis'}}
+          grid={{top: '36px', bottom: '0', left: '0', right: '0', containLabel: true}}
+          yAxis={{
+            axisLabel: {show: false},
+            splitLine: {show: false},
+          }}
         />
-      </ChartSection>
-    </StatsRow>
+      </ChartWrapper>
+    </StatsSection>
   );
 }
 
-const StatsRow = styled('div')`
+const StatsSection = styled('div')`
   display: grid;
-  grid-template-columns: 2fr 1fr;
   gap: ${space(2)};
 `;
 
-const CardsSection = styled('div')`
+const CardsRow = styled('div')`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: ${space(2)};
 `;
 
-const ChartSection = styled('div')`
-  display: flex;
-  align-items: center;
+const ChartWrapper = styled('div')`
+  min-width: 0;
 `;
 
 const StyledScoreCard = styled(ScoreCard)`

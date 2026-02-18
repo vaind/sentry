@@ -63,8 +63,16 @@ export default function PrReviewContent() {
     {staleTime: 30_000}
   );
 
+  const statsQueryParams = useMemo(() => {
+    const params = {...queryParams};
+    if (timeRange === '24h') {
+      params.interval = '1h';
+    }
+    return params;
+  }, [queryParams, timeRange]);
+
   const {data: stats} = useApiQuery<CodeReviewStatsType>(
-    [`/organizations/${organization.slug}/code-review-stats/`, {query: queryParams}],
+    [`/organizations/${organization.slug}/code-review-stats/`, {query: statsQueryParams}],
     {staleTime: 60_000}
   );
 
@@ -110,7 +118,7 @@ export default function PrReviewContent() {
                 onStatusChange={setStatus}
                 onTimeRangeChange={setTimeRange}
               />
-              <PrReviewStats stats={stats} statusFilter={status} />
+              <PrReviewStats stats={stats} statusFilter={status} timeRange={timeRange} />
               <PrReviewList
                 prs={prs}
                 isLoading={isLoading}

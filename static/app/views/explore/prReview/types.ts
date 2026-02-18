@@ -79,6 +79,7 @@ export interface CodeReviewStats {
   timeSeries: Array<{
     comments: number;
     date: string;
+    prs: number;
     reviewed: number;
     skipped: number;
   }>;
