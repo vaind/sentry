@@ -2,6 +2,7 @@ import type React from 'react';
 import {Fragment} from 'react';
 
 import {Tag} from '@sentry/scraps/badge';
+import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink, Link} from '@sentry/scraps/link';
 
 import LoadingIndicator from 'sentry/components/loadingIndicator';
@@ -40,8 +41,7 @@ export function PrReviewList({prs, isLoading, pageLinks, paginationCaption}: Pro
           t('PR #'),
           t('Title'),
           t('Author'),
-          t('PR Status'),
-          t('Review Status'),
+          t('Status'),
           t('Reviews'),
           t('Comments'),
           t('Last Activity'),
@@ -69,20 +69,16 @@ export function PrReviewList({prs, isLoading, pageLinks, paginationCaption}: Pro
               </Link>
             </div>
             <div>{pr.prAuthor ?? '—'}</div>
-            <div>
+            <Flex direction="column" align="start" gap="xs">
               {pr.prState ? (
                 <Tag variant={prStateToTagVariant(pr.prState)}>
                   {formatStatus(pr.prState)}
                 </Tag>
-              ) : (
-                '—'
-              )}
-            </div>
-            <div>
+              ) : null}
               <Tag variant={statusToTagVariant(pr.latestStatus)}>
                 {formatStatus(pr.latestStatus)}
               </Tag>
-            </div>
+            </Flex>
             <div>{pr.eventCount}</div>
             <div>{pr.totalComments}</div>
             <div>
