@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from django.db.models import Avg, Count, F, Q, Sum
-from django.db.models.functions import Coalesce
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -30,15 +29,11 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
         repo_id_int = int(repo_id)
         pr_number_int = int(pr_number)
 
-        events = (
-            CodeReviewEvent.objects.filter(
-                organization_id=organization.id,
-                repository_id=repo_id_int,
-                pr_number=pr_number_int,
-            )
-            .annotate(event_time=Coalesce("trigger_at", "date_added"))
-            .order_by("-event_time")
-        )
+        events = CodeReviewEvent.objects.filter(
+            organization_id=organization.id,
+            repository_id=repo_id_int,
+            pr_number=pr_number_int,
+        ).order_by("-trigger_at")
 
         if not events.exists():
             return Response(status=404)

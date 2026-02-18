@@ -54,7 +54,7 @@ class Migration(CheckedMigration):
                 ("trigger_id", models.CharField(max_length=64, null=True)),
                 ("trigger", models.CharField(max_length=64, null=True)),
                 ("trigger_user", models.TextField(null=True)),
-                ("trigger_at", models.DateTimeField(null=True)),
+                ("trigger_at", models.DateTimeField(default=django.utils.timezone.now)),
                 ("target_commit_sha", models.CharField(max_length=64, null=True)),
                 ("status", models.CharField(max_length=32)),
                 ("denial_reason", models.TextField(null=True)),
@@ -76,16 +76,12 @@ class Migration(CheckedMigration):
                 "db_table": "sentry_code_review_event",
                 "indexes": [
                     models.Index(
-                        fields=["organization_id", "date_added"],
-                        name="sentry_code_organiz_ba033f_idx",
+                        fields=["organization_id", "trigger_at"],
+                        name="sentry_code_organiz_4f4b09_idx",
                     ),
                     models.Index(
-                        fields=["organization_id", "repository_id", "date_added"],
-                        name="sentry_code_organiz_9268b7_idx",
-                    ),
-                    models.Index(
-                        fields=["organization_id", "status", "date_added"],
-                        name="sentry_code_organiz_f0c58f_idx",
+                        fields=["organization_id", "repository_id", "trigger_at"],
+                        name="sentry_code_organiz_7ba32c_idx",
                     ),
                     models.Index(
                         fields=["organization_id", "repository_id", "pr_number"],

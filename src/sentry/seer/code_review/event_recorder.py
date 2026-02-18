@@ -88,9 +88,12 @@ def _extract_trigger_metadata(
     }
 
 
-def _extract_trigger_timestamp(
-    trigger_event_type: str, event: Mapping[str, Any]
-) -> datetime | None:
+def _extract_trigger_timestamp(trigger_event_type: str, event: Mapping[str, Any]) -> datetime:
+    """Extract the trigger timestamp from the webhook payload.
+
+    Falls back to now() for event types without a payload timestamp
+    (e.g. check_run rerequested) or when parsing fails.
+    """
     timestamp_str: str | None = None
     if trigger_event_type == "pull_request":
         timestamp_str = event.get("pull_request", {}).get("updated_at")
@@ -98,11 +101,11 @@ def _extract_trigger_timestamp(
         timestamp_str = event.get("comment", {}).get("created_at")
 
     if not timestamp_str:
-        return None
+        return datetime.now(timezone.utc)
     try:
         return datetime.fromisoformat(timestamp_str)
     except (ValueError, TypeError):
-        return None
+        return datetime.now(timezone.utc)
 
 
 def create_event_record(

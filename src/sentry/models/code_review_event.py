@@ -53,7 +53,7 @@ class CodeReviewEvent(Model):
     # Provider-agnostic fields (aligns with SeerCodeReviewConfig)
     trigger = models.CharField(max_length=64, null=True)
     trigger_user = models.TextField(null=True)
-    trigger_at = models.DateTimeField(null=True)
+    trigger_at = models.DateTimeField(default=timezone.now)
 
     target_commit_sha = models.CharField(max_length=64, null=True)
 
@@ -79,9 +79,8 @@ class CodeReviewEvent(Model):
         app_label = "sentry"
         db_table = "sentry_code_review_event"
         indexes = (
-            models.Index(fields=("organization_id", "date_added")),
-            models.Index(fields=("organization_id", "repository_id", "date_added")),
-            models.Index(fields=("organization_id", "status", "date_added")),
+            models.Index(fields=("organization_id", "trigger_at")),
+            models.Index(fields=("organization_id", "repository_id", "trigger_at")),
             models.Index(fields=("organization_id", "repository_id", "pr_number")),
         )
         constraints = [

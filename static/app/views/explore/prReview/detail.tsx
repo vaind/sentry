@@ -225,7 +225,7 @@ function EventRow({event, prUrl}: {event: CodeReviewEvent; prUrl: string | null}
         )}
       </div>
       <div>
-        <DateTime date={event.triggerAt ?? event.dateAdded} seconds />
+        <DateTime date={event.triggerAt} seconds />
       </div>
       <div>{event.commentsPosted ?? '—'}</div>
       <div>
@@ -276,7 +276,7 @@ function getTimeSpan(events: CodeReviewEvent[]): {first: string; last: string} |
   if (events.length === 0) {
     return null;
   }
-  const times = events.map(e => e.triggerAt ?? e.dateAdded).sort();
+  const times = events.map(e => e.triggerAt).sort();
   return {first: times[0]!, last: times[times.length - 1]!};
 }
 

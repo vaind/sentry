@@ -18,7 +18,7 @@ export interface CodeReviewEvent {
   targetCommitSha: string | null;
   taskEnqueuedAt: string | null;
   trigger: string | null;
-  triggerAt: string | null;
+  triggerAt: string;
   triggerEventAction: string;
   triggerEventType: string;
   triggerId: string | null;

@@ -46,15 +46,13 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if pr_state:
             queryset = queryset.filter(pr_state=pr_state)
 
-        queryset = queryset.annotate(event_time=Coalesce("trigger_at", "date_added"))
-
         start = request.GET.get("start")
         if start:
-            queryset = queryset.filter(event_time__gte=start)
+            queryset = queryset.filter(trigger_at__gte=start)
 
         end = request.GET.get("end")
         if end:
-            queryset = queryset.filter(event_time__lte=end)
+            queryset = queryset.filter(trigger_at__lte=end)
 
         # Event-level counts
         review_events = queryset.filter(REVIEWED_STATUSES)
@@ -105,7 +103,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         trunc_fn = TruncHour if interval == "1h" else TruncDay
 
         time_series = (
-            queryset.annotate(bucket=trunc_fn("event_time"))
+            queryset.annotate(bucket=trunc_fn("trigger_at"))
             .values("bucket")
             .annotate(
                 prs=Count(

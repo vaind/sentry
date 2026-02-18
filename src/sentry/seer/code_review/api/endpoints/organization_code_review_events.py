@@ -40,15 +40,13 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
         if trigger_type:
             queryset = queryset.filter(trigger=trigger_type)
 
-        queryset = queryset.annotate(event_time=Coalesce("trigger_at", "date_added"))
-
         start = request.GET.get("start")
         if start:
-            queryset = queryset.filter(event_time__gte=start)
+            queryset = queryset.filter(trigger_at__gte=start)
 
         end = request.GET.get("end")
         if end:
-            queryset = queryset.filter(event_time__lte=end)
+            queryset = queryset.filter(trigger_at__lte=end)
 
         pr_groups = (
             queryset.filter(pr_number__isnull=False)
@@ -56,7 +54,7 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             .annotate(
                 event_count=Count("id"),
                 total_comments=Coalesce(Sum("comments_posted"), 0),
-                last_activity=Max(Coalesce("trigger_at", "date_added")),
+                last_activity=Max("trigger_at"),
             )
             .order_by("-last_activity")
         )
@@ -84,7 +82,7 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
         for repo_id, pr_num in pr_keys:
             latest = (
                 base_queryset.filter(repository_id=repo_id, pr_number=pr_num)
-                .order_by("-event_time")
+                .order_by("-trigger_at")
                 .values_list("id", flat=True)
                 .first()
             )

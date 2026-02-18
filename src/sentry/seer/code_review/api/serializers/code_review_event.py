@@ -27,7 +27,7 @@ class CodeReviewEventResponse(TypedDict):
     triggerId: str | None
     trigger: str | None
     triggerUser: str | None
-    triggerAt: str | None
+    triggerAt: str
     targetCommitSha: str | None
     status: str
     denialReason: str | None
@@ -74,7 +74,7 @@ class CodeReviewEventSerializer(Serializer):
             "triggerId": obj.trigger_id,
             "trigger": obj.trigger,
             "triggerUser": obj.trigger_user,
-            "triggerAt": _iso_or_none(obj.trigger_at),
+            "triggerAt": obj.trigger_at.isoformat(),
             "targetCommitSha": obj.target_commit_sha,
             "status": obj.status,
             "denialReason": obj.denial_reason,
