@@ -9,6 +9,16 @@ describe('PrReviewContent', () => {
     features: ['pr-review-dashboard'],
   });
 
+  const mockStats = {
+    stats: {
+      totalPrs: 10,
+      totalReviews: 15,
+      totalComments: 25,
+      skippedPrs: 2,
+    },
+    timeSeries: [],
+  };
+
   beforeEach(() => {
     MockApiClient.clearMockResponses();
   });
@@ -20,17 +30,7 @@ describe('PrReviewContent', () => {
     });
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/code-review-stats/`,
-      body: {
-        stats: {
-          total: 0,
-          completed: 0,
-          failed: 0,
-          preflightDenied: 0,
-          webhookFiltered: 0,
-          totalComments: 0,
-        },
-        timeSeries: [],
-      },
+      body: mockStats,
     });
 
     render(<PrReviewContent />, {organization});
@@ -59,17 +59,7 @@ describe('PrReviewContent', () => {
     });
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/code-review-stats/`,
-      body: {
-        stats: {
-          total: 1,
-          completed: 1,
-          failed: 0,
-          preflightDenied: 0,
-          webhookFiltered: 0,
-          totalComments: 3,
-        },
-        timeSeries: [],
-      },
+      body: mockStats,
     });
 
     render(<PrReviewContent />, {organization});
@@ -86,17 +76,7 @@ describe('PrReviewContent', () => {
     });
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/code-review-stats/`,
-      body: {
-        stats: {
-          total: 0,
-          completed: 0,
-          failed: 0,
-          preflightDenied: 0,
-          webhookFiltered: 0,
-          totalComments: 0,
-        },
-        timeSeries: [],
-      },
+      body: mockStats,
     });
 
     render(<PrReviewContent />, {organization});
@@ -111,17 +91,7 @@ describe('PrReviewContent', () => {
     });
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/code-review-stats/`,
-      body: {
-        stats: {
-          total: 10,
-          completed: 7,
-          failed: 1,
-          preflightDenied: 1,
-          webhookFiltered: 1,
-          totalComments: 25,
-        },
-        timeSeries: [],
-      },
+      body: mockStats,
     });
 
     render(<PrReviewContent />, {organization});
@@ -129,6 +99,8 @@ describe('PrReviewContent', () => {
     await waitFor(() => {
       expect(screen.getByText('10')).toBeInTheDocument();
     });
-    expect(screen.getByText('Total Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Total PRs')).toBeInTheDocument();
+    expect(screen.getByText('15')).toBeInTheDocument();
+    expect(screen.getByText('2 skipped')).toBeInTheDocument();
   });
 });

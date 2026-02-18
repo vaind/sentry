@@ -12,6 +12,11 @@ from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 
+SKIPPED_STATUSES = Q(status=CodeReviewEventStatus.PREFLIGHT_DENIED) | Q(
+    status=CodeReviewEventStatus.WEBHOOK_FILTERED
+)
+REVIEWED_STATUSES = Q(status=CodeReviewEventStatus.REVIEW_COMPLETED)
+
 
 @region_silo_endpoint
 class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
@@ -40,22 +45,39 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if end:
             queryset = queryset.filter(event_time__lte=end)
 
-        stats = queryset.aggregate(
-            total=Count("id"),
-            completed=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_COMPLETED)),
-            failed=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_FAILED)),
-            preflight_denied=Count("id", filter=Q(status=CodeReviewEventStatus.PREFLIGHT_DENIED)),
-            webhook_filtered=Count("id", filter=Q(status=CodeReviewEventStatus.WEBHOOK_FILTERED)),
-            total_comments=Sum("comments_posted"),
+        # Event-level counts
+        review_events = queryset.filter(REVIEWED_STATUSES)
+        total_reviews = review_events.count()
+        total_comments = review_events.aggregate(total=Coalesce(Sum("comments_posted"), 0))["total"]
+
+        # PR-level stats: count distinct PRs by their latest event status
+        pr_stats = (
+            queryset.filter(pr_number__isnull=False)
+            .values("repository_id", "pr_number")
+            .annotate(
+                has_reviewed=Count("id", filter=REVIEWED_STATUSES),
+                has_skipped=Count("id", filter=SKIPPED_STATUSES),
+            )
         )
+
+        total_prs = 0
+        reviewed_prs = 0
+        skipped_prs = 0
+        for pr in pr_stats:
+            total_prs += 1
+            if pr["has_reviewed"] > 0:
+                reviewed_prs += 1
+            # A PR is "skipped" only if it was never reviewed
+            if pr["has_skipped"] > 0 and pr["has_reviewed"] == 0:
+                skipped_prs += 1
 
         time_series = (
             queryset.annotate(day=TruncDay("event_time"))
             .values("day")
             .annotate(
-                count=Count("id"),
-                completed=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_COMPLETED)),
-                failed=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_FAILED)),
+                reviewed=Count("id", filter=REVIEWED_STATUSES),
+                skipped=Count("id", filter=SKIPPED_STATUSES),
+                comments=Coalesce(Sum("comments_posted", filter=REVIEWED_STATUSES), 0),
             )
             .order_by("day")
         )
@@ -63,19 +85,17 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         return Response(
             {
                 "stats": {
-                    "total": stats["total"],
-                    "completed": stats["completed"],
-                    "failed": stats["failed"],
-                    "preflightDenied": stats["preflight_denied"],
-                    "webhookFiltered": stats["webhook_filtered"],
-                    "totalComments": stats["total_comments"] or 0,
+                    "totalPrs": total_prs,
+                    "totalReviews": total_reviews,
+                    "totalComments": total_comments,
+                    "skippedPrs": skipped_prs,
                 },
                 "timeSeries": [
                     {
                         "date": entry["day"].isoformat(),
-                        "count": entry["count"],
-                        "completed": entry["completed"],
-                        "failed": entry["failed"],
+                        "reviewed": entry["reviewed"],
+                        "skipped": entry["skipped"],
+                        "comments": entry["comments"],
                     }
                     for entry in time_series
                 ],

@@ -68,7 +68,7 @@ export default function PrReviewContent() {
                 onStatusChange={setStatus}
                 onTriggerTypeChange={setTriggerType}
               />
-              <PrReviewStats stats={stats?.stats} />
+              <PrReviewStats stats={stats} />
               <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
             </Grid>
           </Layout.Main>

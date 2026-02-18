@@ -1,42 +1,83 @@
+import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
+import MiniBarChart from 'sentry/components/charts/miniBarChart';
 import {ScoreCard} from 'sentry/components/scoreCard';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {CodeReviewStats} from 'sentry/views/explore/prReview/types';
 
 interface Props {
-  stats: CodeReviewStats['stats'] | undefined;
+  stats: CodeReviewStats | undefined;
 }
 
 export function PrReviewStats({stats}: Props) {
+  const theme = useTheme();
+
   if (!stats) {
     return null;
   }
 
+  const series = [
+    {
+      seriesName: t('Reviewed'),
+      color: theme.colors.green400,
+      data: stats.timeSeries.map(d => ({name: d.date, value: d.reviewed})),
+    },
+    {
+      seriesName: t('Skipped'),
+      color: theme.colors.yellow400,
+      data: stats.timeSeries.map(d => ({name: d.date, value: d.skipped})),
+    },
+    {
+      seriesName: t('Comments'),
+      color: theme.colors.purple400,
+      data: stats.timeSeries.map(d => ({name: d.date, value: d.comments})),
+    },
+  ];
+
   return (
-    <StatsGrid>
-      <StyledScoreCard title={t('Total Reviews')} score={stats.total} />
-      <StyledScoreCard title={t('Completed')} score={stats.completed} />
-      <StyledScoreCard title={t('Failed')} score={stats.failed} />
-      <StyledScoreCard title={t('Preflight Denied')} score={stats.preflightDenied} />
-      <StyledScoreCard title={t('Filtered')} score={stats.webhookFiltered} />
-      <StyledScoreCard title={t('Comments Posted')} score={stats.totalComments} />
-    </StatsGrid>
+    <StatsRow>
+      <CardsSection>
+        <StyledScoreCard
+          title={t('Total PRs')}
+          score={stats.stats.totalPrs}
+          trend={t('%d skipped', stats.stats.skippedPrs)}
+        />
+        <StyledScoreCard
+          title={t('Reviews')}
+          score={stats.stats.totalReviews}
+          trend={t('%d comments posted', stats.stats.totalComments)}
+        />
+      </CardsSection>
+      <ChartSection>
+        <MiniBarChart
+          height={96}
+          series={series}
+          stacked
+          isGroupedByDate
+          showTimeInTooltip
+        />
+      </ChartSection>
+    </StatsRow>
   );
 }
 
-const StatsGrid = styled('div')`
+const StatsRow = styled('div')`
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: ${space(2)};
+`;
+
+const CardsSection = styled('div')`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: ${space(2)};
+`;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  @media (min-width: ${p => p.theme.breakpoints.lg}) {
-    grid-template-columns: repeat(6, 1fr);
-  }
+const ChartSection = styled('div')`
+  display: flex;
+  align-items: center;
 `;
 
 const StyledScoreCard = styled(ScoreCard)`

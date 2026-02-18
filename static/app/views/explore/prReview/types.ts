@@ -65,17 +65,15 @@ export interface CodeReviewComment {
 
 export interface CodeReviewStats {
   stats: {
-    completed: number;
-    failed: number;
-    preflightDenied: number;
-    total: number;
+    skippedPrs: number;
     totalComments: number;
-    webhookFiltered: number;
+    totalPrs: number;
+    totalReviews: number;
   };
   timeSeries: Array<{
-    completed: number;
-    count: number;
+    comments: number;
     date: string;
-    failed: number;
+    reviewed: number;
+    skipped: number;
   }>;
 }
