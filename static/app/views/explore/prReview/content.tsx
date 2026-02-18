@@ -1,5 +1,7 @@
 import {useState} from 'react';
 
+import {Grid} from '@sentry/scraps/layout';
+
 import * as Layout from 'sentry/components/layouts/thirds';
 import {PageHeadingQuestionTooltip} from 'sentry/components/pageHeadingQuestionTooltip';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
@@ -47,7 +49,7 @@ export default function PrReviewContent() {
     <SentryDocumentTitle title={t('PR Reviews')} orgSlug={organization.slug}>
       <Layout.Page>
         <Layout.Header unified>
-          <Layout.HeaderContent>
+          <Layout.HeaderContent unified>
             <Layout.Title>
               {t('PR Reviews')}
               <PageHeadingQuestionTooltip
@@ -59,14 +61,16 @@ export default function PrReviewContent() {
         </Layout.Header>
         <Layout.Body>
           <Layout.Main width="full">
-            <PrReviewStats stats={stats?.stats} />
-            <PrReviewFilters
-              status={status}
-              triggerType={triggerType}
-              onStatusChange={setStatus}
-              onTriggerTypeChange={setTriggerType}
-            />
-            <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
+            <Grid gap="xl" columns="100%">
+              <PrReviewFilters
+                status={status}
+                triggerType={triggerType}
+                onStatusChange={setStatus}
+                onTriggerTypeChange={setTriggerType}
+              />
+              <PrReviewStats stats={stats?.stats} />
+              <PrReviewList prs={prs} isLoading={isLoading} pageLinks={pageLinks} />
+            </Grid>
           </Layout.Main>
         </Layout.Body>
       </Layout.Page>
