@@ -66,8 +66,8 @@ describe('PrReviewContent', () => {
     render(<PrReviewContent />, {organization});
 
     expect(await screen.findByText('Fix the bug')).toBeInTheDocument();
-    expect(screen.getByText('#42')).toBeInTheDocument();
-    expect(screen.getByText('owner/repo')).toBeInTheDocument();
+    expect(screen.getByText('owner/repo#42')).toBeInTheDocument();
+    expect(screen.getByText('by testuser')).toBeInTheDocument();
   });
 
   it('renders empty state when no PRs', async () => {
