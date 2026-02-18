@@ -72,6 +72,8 @@ export interface CodeReviewStats {
   repositories: CodeReviewRepository[];
   stats: {
     skippedPrs: number;
+    topAuthors: Array<{author: string; prCount: number}>;
+    totalAuthors: number;
     totalComments: number;
     totalPrs: number;
     totalReviews: number;

@@ -4,8 +4,8 @@ import styled from '@emotion/styled';
 
 import {BarChart} from 'sentry/components/charts/barChart';
 import Legend from 'sentry/components/charts/components/legend';
-import {ScoreCard} from 'sentry/components/scoreCard';
-import {t} from 'sentry/locale';
+import {ScoreCard, ScorePanel} from 'sentry/components/scoreCard';
+import {t, tn} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import {getFormattedDate} from 'sentry/utils/dates';
 import type {CodeReviewStats} from 'sentry/views/explore/prReview/types';
@@ -128,6 +128,23 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
           score={stats.stats.totalReviews}
           trend={t('%d comments posted', stats.stats.totalComments)}
         />
+        <AuthorsCard>
+          <AuthorsHeader>
+            <AuthorsTitle>{t('Authors')}</AuthorsTitle>
+            <TopAuthorsLabel>{t('Top Authors')}</TopAuthorsLabel>
+          </AuthorsHeader>
+          <AuthorsBody>
+            <AuthorsCount>{stats.stats.totalAuthors}</AuthorsCount>
+            <TopAuthors>
+              {stats.stats.topAuthors.map(({author, prCount}) => (
+                <AuthorLine key={author}>
+                  <AuthorName>{author}</AuthorName>
+                  <span>{tn('%s PR', '%s PRs', prCount)}</span>
+                </AuthorLine>
+              ))}
+            </TopAuthors>
+          </AuthorsBody>
+        </AuthorsCard>
       </CardsRow>
       <ChartWrapper>
         <BarChart
@@ -171,7 +188,7 @@ const StatsSection = styled('div')`
 
 const CardsRow = styled('div')`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: ${space(2)};
 `;
 
@@ -181,4 +198,60 @@ const ChartWrapper = styled('div')`
 
 const StyledScoreCard = styled(ScoreCard)`
   margin: 0;
+`;
+
+const AuthorsCard = styled(ScorePanel)`
+  margin: 0;
+`;
+
+const AuthorsHeader = styled('div')`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+`;
+
+const AuthorsTitle = styled('div')`
+  font-size: ${p => p.theme.font.size.lg};
+  color: ${p => p.theme.tokens.content.primary};
+  font-weight: ${p => p.theme.font.weight.sans.medium};
+`;
+
+const AuthorsBody = styled('div')`
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: ${space(2)};
+`;
+
+const AuthorsCount = styled('span')`
+  font-size: 32px;
+  line-height: 1;
+  color: ${p => p.theme.tokens.content.primary};
+`;
+
+const TopAuthors = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${space(0.25)};
+  text-align: right;
+`;
+
+const AuthorLine = styled('div')`
+  display: flex;
+  gap: ${space(1)};
+  justify-content: flex-end;
+  font-size: ${p => p.theme.font.size.sm};
+  color: ${p => p.theme.tokens.content.secondary};
+  line-height: 1.4;
+`;
+
+const TopAuthorsLabel = styled('div')`
+  font-size: ${p => p.theme.font.size.xs};
+  font-weight: ${p => p.theme.font.weight.sans.medium};
+  color: ${p => p.theme.tokens.content.muted};
+  text-transform: uppercase;
+`;
+
+const AuthorName = styled('span')`
+  color: ${p => p.theme.tokens.content.primary};
 `;

@@ -83,6 +83,28 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
             if pr["has_skipped"] > 0 and pr["has_reviewed"] == 0:
                 skipped_prs += 1
 
+        # Author stats: distinct authors and top authors by PR count
+        author_prs = (
+            queryset.filter(pr_number__isnull=False, pr_author__isnull=False)
+            .exclude(pr_author="")
+            .values("pr_author")
+            .annotate(
+                pr_count=Count(
+                    Concat(
+                        Cast("repository_id", output_field=CharField()),
+                        Value("-"),
+                        Cast("pr_number", output_field=CharField()),
+                    ),
+                    distinct=True,
+                )
+            )
+            .order_by("-pr_count")
+        )
+        total_authors = author_prs.count()
+        top_authors = [
+            {"author": entry["pr_author"], "prCount": entry["pr_count"]} for entry in author_prs[:3]
+        ]
+
         interval = request.GET.get("interval", "1d")
         trunc_fn = TruncHour if interval == "1h" else TruncDay
 
@@ -114,6 +136,8 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
                     "totalReviews": total_reviews,
                     "totalComments": total_comments,
                     "skippedPrs": skipped_prs,
+                    "totalAuthors": total_authors,
+                    "topAuthors": top_authors,
                 },
                 "timeSeries": [
                     {
