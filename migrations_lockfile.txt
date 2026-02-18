@@ -31,7 +31,7 @@ releases: 0004_cleanup_failed_safe_deletes
 
 replays: 0007_organizationmember_replay_access
 
-sentry: 1032_code_review_event_updated_fields
+sentry: 1031_code_review_event
 
 social_auth: 0003_social_auth_json_field
 
