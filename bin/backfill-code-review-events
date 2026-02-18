@@ -25,7 +25,9 @@ import os
 import subprocess
 from datetime import datetime, timezone
 
+from sentry.integrations.models.organization_integration import OrganizationIntegration
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.utils import json
 
@@ -156,6 +158,34 @@ def main():
                 repo_full_name,
             )
 
+    # Resolve the local org and GitHub integration for creating missing repos.
+    # Seer metadata has prod org_id=1 which won't match the local dev DB.
+    # BACKFILL_ORG_SLUG lets the user specify their local org (defaults to "sentry").
+    org_slug = os.environ.get("BACKFILL_ORG_SLUG", "default")
+    try:
+        local_org = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        logger.warning(
+            "Organization with slug '%s' not found; set BACKFILL_ORG_SLUG to your local org slug",
+            org_slug,
+        )
+        local_org = None
+
+    local_integration_id: int | None = None
+    if local_org:
+        oi = (
+            OrganizationIntegration.objects.filter(
+                organization_id=local_org.id,
+                integration__provider="github",
+            )
+            .select_related("integration")
+            .first()
+        )
+        if oi:
+            local_integration_id = oi.integration_id
+        else:
+            logger.warning("No GitHub integration found for org '%s'", org_slug)
+
     repo_cache: dict[str, Repository | None] = {}
 
     created = skipped = errors = 0
@@ -170,13 +200,41 @@ def main():
             errors += 1
             continue
 
-        # Look up repository
+        # Parse JSON columns early — needed for repo creation and timestamps
+        metadata = parse_dict_value(row.get("seer_event_metadata"))
+        state = parse_dict_value(row.get("run_state_value"))
+
+        # Look up or create repository
         if repo_full_name not in repo_cache:
             try:
                 repo_cache[repo_full_name] = Repository.objects.get(name=repo_full_name)
             except Repository.DoesNotExist:
-                logger.warning("Repository '%s' not found in Sentry DB", repo_full_name)
-                repo_cache[repo_full_name] = None
+                # Extract repo metadata from run_state_value.request.repo
+                repo_meta = None
+                if state:
+                    request_data = state.get("request", {})
+                    if isinstance(request_data, dict):
+                        repo_meta = request_data.get("repo")
+                if repo_meta and isinstance(repo_meta, dict) and local_org:
+                    repo_obj, created_repo = Repository.objects.get_or_create(
+                        name=repo_full_name,
+                        defaults=dict(
+                            organization_id=local_org.id,
+                            provider=f"integrations:{repo_meta.get('provider', 'github')}",
+                            external_id=str(repo_meta.get("external_id", "")),
+                            integration_id=local_integration_id,
+                            url=f"https://github.com/{repo_full_name}",
+                        ),
+                    )
+                    if created_repo:
+                        logger.info("Created repository '%s'", repo_full_name)
+                    repo_cache[repo_full_name] = repo_obj
+                else:
+                    logger.warning(
+                        "Repository '%s' not found and no repo metadata in run_state_value",
+                        repo_full_name,
+                    )
+                    repo_cache[repo_full_name] = None
             except Repository.MultipleObjectsReturned:
                 repo_cache[repo_full_name] = Repository.objects.filter(name=repo_full_name).first()
 
@@ -186,10 +244,6 @@ def main():
             continue
 
         org_id = repo.organization_id
-
-        # Parse JSON columns for timestamps and trigger_id
-        metadata = parse_dict_value(row.get("seer_event_metadata"))
-        state = parse_dict_value(row.get("run_state_value"))
 
         # Extract trigger_id (github_delivery_id) from run_state or metadata
         trigger_id = None
