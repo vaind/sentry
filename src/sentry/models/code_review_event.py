@@ -24,7 +24,6 @@ class CodeReviewEventStatus(StrEnum):
     REVIEW_STARTED = "review_started"
     REVIEW_COMPLETED = "review_completed"
     REVIEW_FAILED = "review_failed"
-    PR_CLOSED_SENT = "pr_closed_sent"
 
 
 @region_silo_model

@@ -16,7 +16,9 @@ class TestCreateEventRecord(TestCase):
                 "title": "Fix the bug",
                 "user": {"login": "testuser"},
                 "html_url": "https://github.com/owner/repo/pull/42",
-            }
+                "updated_at": "2026-01-15T10:30:00Z",
+            },
+            "sender": {"login": "triggeruser"},
         }
 
         record = create_event_record(
@@ -39,6 +41,9 @@ class TestCreateEventRecord(TestCase):
         assert record.trigger_event_type == "pull_request"
         assert record.trigger_event_action == "opened"
         assert record.trigger_id == "abc-123"
+        assert record.trigger == "pr_opened"
+        assert record.trigger_user == "triggeruser"
+        assert record.trigger_at is not None
         assert record.status == CodeReviewEventStatus.WEBHOOK_RECEIVED
         assert record.webhook_received_at is not None
 
@@ -52,7 +57,11 @@ class TestCreateEventRecord(TestCase):
                 "pull_request": {
                     "html_url": "https://github.com/owner/repo/pull/99",
                 },
-            }
+            },
+            "comment": {
+                "created_at": "2026-01-15T11:00:00Z",
+            },
+            "sender": {"login": "commenter"},
         }
 
         record = create_event_record(
@@ -69,6 +78,9 @@ class TestCreateEventRecord(TestCase):
         assert record.pr_number == 99
         assert record.pr_title == "Some PR"
         assert record.pr_author == "commenter"
+        assert record.trigger == "comment_command"
+        assert record.trigger_user == "commenter"
+        assert record.trigger_at is not None
 
     def test_creates_preflight_denied_event(self) -> None:
         repo = self.create_repo(project=self.project)

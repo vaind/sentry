@@ -55,6 +55,56 @@ def _extract_pr_metadata(
     }
 
 
+_TRIGGER_MAP: dict[str, dict[str, str]] = {
+    "pull_request": {
+        "opened": "pr_opened",
+        "synchronize": "new_commit",
+        "ready_for_review": "ready_for_review",
+        "closed": "pr_closed",
+    },
+    "issue_comment": {
+        "created": "comment_command",
+    },
+    "check_run": {
+        "rerequested": "rerun",
+    },
+}
+
+
+def _extract_trigger_metadata(
+    trigger_event_type: str,
+    trigger_event_action: str,
+    event: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Extract provider-agnostic trigger fields from a webhook payload."""
+    trigger = _TRIGGER_MAP.get(trigger_event_type, {}).get(trigger_event_action)
+    trigger_user = event.get("sender", {}).get("login")
+    trigger_at = _extract_trigger_timestamp(trigger_event_type, event)
+
+    return {
+        "trigger": trigger,
+        "trigger_user": trigger_user,
+        "trigger_at": trigger_at,
+    }
+
+
+def _extract_trigger_timestamp(
+    trigger_event_type: str, event: Mapping[str, Any]
+) -> datetime | None:
+    timestamp_str: str | None = None
+    if trigger_event_type == "pull_request":
+        timestamp_str = event.get("pull_request", {}).get("updated_at")
+    elif trigger_event_type == "issue_comment":
+        timestamp_str = event.get("comment", {}).get("created_at")
+
+    if not timestamp_str:
+        return None
+    try:
+        return datetime.fromisoformat(timestamp_str)
+    except (ValueError, TypeError):
+        return None
+
+
 def create_event_record(
     *,
     organization_id: int,
@@ -68,6 +118,7 @@ def create_event_record(
 ) -> CodeReviewEvent | None:
     now = datetime.now(timezone.utc)
     pr_metadata = _extract_pr_metadata(trigger_event_type, event)
+    trigger_metadata = _extract_trigger_metadata(trigger_event_type, trigger_event_action, event)
 
     timestamp_field = _status_to_timestamp_field(status)
     timestamps = {timestamp_field: now} if timestamp_field else {}
@@ -82,6 +133,7 @@ def create_event_record(
             status=status,
             denial_reason=denial_reason,
             **pr_metadata,
+            **trigger_metadata,
             **timestamps,
         )
     except Exception:

@@ -72,12 +72,9 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         )
 
         total_prs = 0
-        reviewed_prs = 0
         skipped_prs = 0
         for pr in pr_stats:
             total_prs += 1
-            if pr["has_reviewed"] > 0:
-                reviewed_prs += 1
             # A PR is "skipped" only if it was never reviewed
             if pr["has_skipped"] > 0 and pr["has_reviewed"] == 0:
                 skipped_prs += 1

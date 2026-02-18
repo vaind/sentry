@@ -106,12 +106,15 @@ def handle_check_run_event(
 
     from .task import process_github_webhook_event
 
+    trigger_id = getattr(event_record, "trigger_id", None) if event_record else None
+
     process_github_webhook_event.delay(
         github_event=github_event.value,
         event_payload={"original_run_id": validated_event.check_run.external_id},
         action=validated_event.action,
         html_url=validated_event.check_run.html_url,
         enqueued_at_str=datetime.now(timezone.utc).isoformat(),
+        trigger_id=trigger_id,
     )
     record_webhook_enqueued(github_event, action)
     update_event_status(event_record, "task_enqueued")
