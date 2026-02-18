@@ -1,3 +1,4 @@
+import type React from 'react';
 import {Fragment} from 'react';
 
 import {Tag} from '@sentry/scraps/badge';
@@ -20,10 +21,11 @@ import {
 interface Props {
   isLoading: boolean;
   pageLinks: string | null;
+  paginationCaption: React.ReactNode;
   prs: CodeReviewPR[] | undefined;
 }
 
-export function PrReviewList({prs, isLoading, pageLinks}: Props) {
+export function PrReviewList({prs, isLoading, pageLinks, paginationCaption}: Props) {
   const organization = useOrganization();
 
   if (isLoading) {
@@ -89,7 +91,7 @@ export function PrReviewList({prs, isLoading, pageLinks}: Props) {
           </Fragment>
         ))}
       </PanelTable>
-      <Pagination pageLinks={pageLinks} />
+      <Pagination pageLinks={pageLinks} caption={paginationCaption} />
     </Fragment>
   );
 }
