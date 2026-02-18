@@ -18,6 +18,7 @@ from sentry.runner import configure
 configure()
 
 import argparse
+import ast
 import csv
 import logging
 import os
@@ -45,12 +46,20 @@ def parse_dt(value: str | None) -> datetime | None:
         return None
 
 
-def parse_run_state_value(raw: str | None) -> dict | None:
-    """Parse run_state_value JSON, stripping null bytes if present."""
+def parse_dict_value(raw: str | None) -> dict | None:
+    """Parse a Python repr dict or JSON string, stripping null bytes if present."""
     if not raw or raw in ("None", ""):
         return None
+    cleaned = raw.replace("\x00", "").replace("\\u0000", "")
+    # Try ast.literal_eval first (handles Python repr with single quotes)
     try:
-        cleaned = raw.replace("\x00", "").replace("\\u0000", "")
+        result = ast.literal_eval(cleaned)
+        if isinstance(result, dict):
+            return result
+    except (ValueError, SyntaxError):
+        pass
+    # Fall back to JSON
+    try:
         return json.loads(cleaned)
     except (json.JSONDecodeError, ValueError):
         return None
@@ -178,15 +187,21 @@ def main():
 
         org_id = repo.organization_id
 
-        # Try to extract trigger_id from run_state JSON (stored as github_delivery_id in Seer)
-        state = parse_run_state_value(row.get("run_state_value"))
+        # Parse JSON columns for timestamps and trigger_id
+        metadata = parse_dict_value(row.get("seer_event_metadata"))
+        state = parse_dict_value(row.get("run_state_value"))
+
+        # Extract trigger_id (github_delivery_id) from run_state or metadata
         trigger_id = None
-        if state:
-            trigger_id = state.get("github_delivery_id")
-            if not trigger_id:
-                request_data = state.get("request")
-                if isinstance(request_data, dict):
-                    trigger_id = request_data.get("github_delivery_id")
+        for source in (state, metadata):
+            if source:
+                trigger_id = source.get("github_delivery_id")
+                if not trigger_id:
+                    request_data = source.get("request")
+                    if isinstance(request_data, dict):
+                        trigger_id = request_data.get("github_delivery_id")
+            if trigger_id:
+                break
         if not trigger_id:
             trigger_id = f"backfill-run-{run_id}"
 
@@ -198,14 +213,21 @@ def main():
         comments_posted_raw = row.get("comments_posted", "").strip()
         comments_posted = int(comments_posted_raw) if comments_posted_raw else 0
 
-        has_completion = row.get("completed_at", "").strip() not in ("", "None")
+        # Extract timestamps from metadata, falling back to event_created_at
+        fallback_dt = parse_dt(row.get("event_created_at"))
+        ts = metadata or {}
+        source_trigger_at = parse_dt(ts.get("source_trigger_at")) or fallback_dt
+        sentry_received_at = parse_dt(ts.get("sentry_received_trigger_at")) or fallback_dt
+        seer_received_at = parse_dt(ts.get("seer_received_at")) or fallback_dt
+        started_at = parse_dt(ts.get("started_at")) or fallback_dt
+        completed_at = parse_dt(ts.get("completed_at"))
+
         status = (
             CodeReviewEventStatus.REVIEW_COMPLETED
-            if has_completion
+            if completed_at
             else CodeReviewEventStatus.SENT_TO_SEER
         )
 
-        fallback_dt = parse_dt(row.get("event_created_at"))
         pr_url = f"https://github.com/{repo_full_name}/pull/{pr_number}"
         info = pr_info_by_repo.get(repo_full_name, {}).get(int(pr_number))
         pr_title = info.title if info else None
@@ -239,14 +261,14 @@ def main():
                 trigger_id=trigger_id,
                 trigger=row.get("trigger", "").strip() or None,
                 trigger_user=row.get("trigger_user", "").strip() or None,
-                trigger_at=parse_dt(row.get("source_trigger_at")) or fallback_dt,
+                trigger_at=source_trigger_at,
                 status=status,
                 seer_run_id=run_id,
                 comments_posted=comments_posted,
-                webhook_received_at=parse_dt(row.get("sentry_received_trigger_at")) or fallback_dt,
-                sent_to_seer_at=parse_dt(row.get("seer_received_at")) or fallback_dt,
-                review_started_at=parse_dt(row.get("started_at")) or fallback_dt,
-                review_completed_at=parse_dt(row.get("completed_at")) or fallback_dt,
+                webhook_received_at=sentry_received_at,
+                sent_to_seer_at=seer_received_at,
+                review_started_at=started_at,
+                review_completed_at=completed_at or fallback_dt,
             )
             created += 1
         except Exception:
