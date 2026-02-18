@@ -53,15 +53,23 @@ def parse_run_state_value(raw: str | None) -> dict | None:
         return None
 
 
-def fetch_pr_titles(owner: str, repo: str, pr_numbers: list[int]) -> dict[int, str]:
-    """Batch-fetch PR titles using gh CLI GraphQL API."""
-    titles: dict[int, str] = {}
+class PrInfo:
+    __slots__ = ("title", "state")
+
+    def __init__(self, title: str, state: str):
+        self.title = title
+        self.state = state
+
+
+def fetch_pr_info(owner: str, repo: str, pr_numbers: list[int]) -> dict[int, PrInfo]:
+    """Batch-fetch PR titles and states using gh CLI GraphQL API."""
+    results: dict[int, PrInfo] = {}
     for batch_start in range(0, len(pr_numbers), GITHUB_GRAPHQL_BATCH_SIZE):
         batch = pr_numbers[batch_start : batch_start + GITHUB_GRAPHQL_BATCH_SIZE]
         # Build GraphQL query with aliases for each PR
         fragments = []
         for i, pr_num in enumerate(batch):
-            fragments.append(f"pr{i}: pullRequest(number: {pr_num}) {{ number title }}")
+            fragments.append(f"pr{i}: pullRequest(number: {pr_num}) {{ number title state }}")
         query = f"""{{
   repository(owner: "{owner}", name: "{repo}") {{
     {chr(10).join(f"    {f}" for f in fragments)}
@@ -76,12 +84,17 @@ def fetch_pr_titles(owner: str, repo: str, pr_numbers: list[int]) -> dict[int, s
             )
             data = json.loads(result.stdout)
             repo_data = data.get("data", {}).get("repository", {})
-            for key, value in repo_data.items():
-                if value and "title" in value:
-                    titles[value["number"]] = value["title"]
+            for value in repo_data.values():
+                if value and "number" in value:
+                    # GraphQL returns state as OPEN, CLOSED, MERGED — lowercase it
+                    state = (value.get("state") or "").lower()
+                    results[value["number"]] = PrInfo(
+                        title=value.get("title", ""),
+                        state=state,
+                    )
         except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
-            logger.exception("Failed to fetch PR titles batch starting at %d", batch_start)
-    return titles
+            logger.exception("Failed to fetch PR info batch starting at %d", batch_start)
+    return results
 
 
 def main():
@@ -117,17 +130,17 @@ def main():
         if repo_full_name and pr_number:
             pr_numbers_by_repo.setdefault(repo_full_name, set()).add(int(pr_number))
 
-    # Fetch PR titles via GitHub GraphQL
-    pr_titles: dict[str, dict[int, str]] = {}
+    # Fetch PR info (titles, states) via GitHub GraphQL
+    pr_info_by_repo: dict[str, dict[int, PrInfo]] = {}
     for repo_full_name, pr_nums in pr_numbers_by_repo.items():
         owner, _, repo_name = repo_full_name.partition("/")
         if owner and repo_name:
             unique_prs = sorted(pr_nums)
-            logger.info("Fetching %d PR titles for %s", len(unique_prs), repo_full_name)
-            pr_titles[repo_full_name] = fetch_pr_titles(owner, repo_name, unique_prs)
+            logger.info("Fetching %d PR info for %s", len(unique_prs), repo_full_name)
+            pr_info_by_repo[repo_full_name] = fetch_pr_info(owner, repo_name, unique_prs)
             logger.info(
-                "Fetched %d titles for %s",
-                len(pr_titles[repo_full_name]),
+                "Fetched %d PR info for %s",
+                len(pr_info_by_repo[repo_full_name]),
                 repo_full_name,
             )
 
@@ -162,15 +175,15 @@ def main():
 
         org_id = repo.organization_id
 
-        # Try to extract trigger_id from run_state JSON
+        # Try to extract trigger_id from run_state JSON (stored as github_delivery_id in Seer)
         state = parse_run_state_value(row.get("run_state_value"))
         trigger_id = None
         if state:
-            trigger_id = state.get("trigger_id")
+            trigger_id = state.get("github_delivery_id")
             if not trigger_id:
                 request_data = state.get("request")
                 if isinstance(request_data, dict):
-                    trigger_id = request_data.get("trigger_id")
+                    trigger_id = request_data.get("github_delivery_id")
         if not trigger_id:
             trigger_id = f"backfill-run-{run_id}"
 
@@ -190,13 +203,16 @@ def main():
         )
 
         pr_url = f"https://github.com/{repo_full_name}/pull/{pr_number}"
-        pr_title = pr_titles.get(repo_full_name, {}).get(int(pr_number))
+        info = pr_info_by_repo.get(repo_full_name, {}).get(int(pr_number))
+        pr_title = info.title if info else None
+        pr_state = info.state if info else None
 
         if dry_run:
             logger.info(
-                "Would create: PR #%s '%s' run=%s delivery=%s comments=%d status=%s",
+                "Would create: PR #%s '%s' (%s) run=%s delivery=%s comments=%d status=%s",
                 pr_number,
                 pr_title or "(no title)",
+                pr_state or "?",
                 run_id,
                 trigger_id,
                 comments_posted,
@@ -213,6 +229,7 @@ def main():
                 pr_title=pr_title,
                 pr_author=row.get("pr_author", "").strip() or None,
                 pr_url=pr_url,
+                pr_state=pr_state,
                 trigger_event_type="pull_request",
                 trigger_event_action="opened",
                 trigger_id=trigger_id,
