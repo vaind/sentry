@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
@@ -21,7 +21,10 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value)
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except (ValueError, TypeError):
         return None
 
@@ -33,6 +36,13 @@ def _parse_timestamp(value: str | None) -> datetime | None:
 )
 def process_pr_review_completion(*, payload: dict[str, Any]) -> None:
     trigger_id = payload.get("trigger_id")
+    if not trigger_id:
+        logger.warning(
+            "seer.code_review.webhook.missing_trigger_id",
+            extra={"payload_keys": list(payload.keys())},
+        )
+        return
+
     seer_run_id = payload.get("seer_run_id")
     status = payload.get("status", "completed")
     comments_posted = payload.get("comments_posted", 0)

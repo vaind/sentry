@@ -1,4 +1,4 @@
-from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.code_review_event import CodeReviewEventStatus
 from sentry.seer.code_review.event_recorder import (
     create_event_record,
     find_event_by_trigger_id,
@@ -146,11 +146,9 @@ class TestCreateEventRecord(TestCase):
 class TestUpdateEventStatus(TestCase):
     def test_updates_status(self) -> None:
         repo = self.create_repo(project=self.project)
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=repo,
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
 
@@ -162,11 +160,9 @@ class TestUpdateEventStatus(TestCase):
 
     def test_updates_status_with_denial_reason(self) -> None:
         repo = self.create_repo(project=self.project)
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=repo,
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )
 
@@ -188,11 +184,9 @@ class TestUpdateEventStatus(TestCase):
 class TestFindEventByDeliveryId(TestCase):
     def test_finds_existing_event(self) -> None:
         repo = self.create_repo(project=self.project)
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=repo,
             trigger_id="find-me-123",
             status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
         )

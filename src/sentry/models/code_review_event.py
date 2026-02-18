@@ -85,8 +85,8 @@ class CodeReviewEvent(Model):
         )
         constraints = [
             models.UniqueConstraint(
-                fields=["trigger_id"],
-                name="unique_trigger_id",
+                fields=["organization_id", "trigger_id"],
+                name="unique_org_trigger_id",
                 condition=models.Q(trigger_id__isnull=False),
             ),
         ]

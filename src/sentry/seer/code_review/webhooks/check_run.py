@@ -96,6 +96,7 @@ def handle_check_run_event(
     try:
         validated_event = _validate_github_check_run_event(event)
     except (ValidationError, ValueError):
+        # Log but don't raise to prevent sending a 500 to GitHub, which would trigger a retry
         logger.exception(Log.INVALID_PAYLOAD.value, extra=extra)
         record_webhook_handler_error(
             github_event,
@@ -104,6 +105,7 @@ def handle_check_run_event(
         )
         return
 
+    # Import here to avoid circular dependency with webhook_task
     from .task import process_github_webhook_event
 
     trigger_id = getattr(event_record, "trigger_id", None) if event_record else None

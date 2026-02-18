@@ -924,6 +924,21 @@ class Factories:
 
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)
+    def create_code_review_event(organization, repository, **kwargs):
+        from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+
+        kwargs.setdefault("trigger_event_type", "pull_request")
+        kwargs.setdefault("trigger_event_action", "opened")
+        kwargs.setdefault("status", CodeReviewEventStatus.REVIEW_COMPLETED)
+
+        return CodeReviewEvent.objects.create(
+            organization_id=organization.id,
+            repository_id=repository.id,
+            **kwargs,
+        )
+
+    @staticmethod
+    @assume_test_silo_mode(SiloMode.REGION)
     def create_repository_settings(
         repository: Repository,
         enabled_code_review: bool = False,

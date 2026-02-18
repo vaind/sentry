@@ -36,7 +36,7 @@ export default function PrReviewContent() {
   const queryParams: Record<string, string | string[]> = useMemo(() => {
     const params: Record<string, string | string[]> = {};
     if (status) {
-      params.status = status;
+      params.prState = status;
     }
     if (repositoryIds.length > 0) {
       params.repositoryId = repositoryIds;

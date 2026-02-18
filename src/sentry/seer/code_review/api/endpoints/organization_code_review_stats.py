@@ -42,7 +42,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if repository_ids:
             queryset = queryset.filter(repository_id__in=repository_ids)
 
-        pr_state = request.GET.get("status")
+        pr_state = request.GET.get("prState")
         if pr_state:
             queryset = queryset.filter(pr_state=pr_state)
 

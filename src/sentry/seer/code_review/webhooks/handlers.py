@@ -76,7 +76,7 @@ def handle_webhook_event(
         if preflight.denial_reason:
             record_webhook_filtered(
                 github_event=github_event,
-                trigger_event_action=event.get("action", "unknown"),
+                github_event_action=event.get("action", "unknown"),
                 reason=preflight.denial_reason,
             )
             create_event_record(

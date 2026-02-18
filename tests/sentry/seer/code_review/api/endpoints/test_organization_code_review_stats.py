@@ -13,15 +13,11 @@ class OrganizationCodeReviewStatsTest(APITestCase):
         self.login_as(user=self.user)
 
     def _create_event(self, **kwargs) -> CodeReviewEvent:
-        defaults = {
-            "organization_id": self.organization.id,
-            "repository_id": self.repo.id,
-            "trigger_event_type": "pull_request",
-            "trigger_event_action": "opened",
-            "status": CodeReviewEventStatus.REVIEW_COMPLETED,
-        }
-        defaults.update(kwargs)
-        return CodeReviewEvent.objects.create(**defaults)
+        return self.create_code_review_event(
+            organization=self.organization,
+            repository=self.repo,
+            **kwargs,
+        )
 
     def test_requires_feature_flag(self) -> None:
         url = reverse(self.endpoint, args=[self.organization.slug])
@@ -148,13 +144,10 @@ class OrganizationCodeReviewStatsTest(APITestCase):
         other_repo = self.create_repo(
             project=self.create_project(organization=other_org), name="other/repo"
         )
-        CodeReviewEvent.objects.create(
-            organization_id=other_org.id,
-            repository_id=other_repo.id,
+        self.create_code_review_event(
+            organization=other_org,
+            repository=other_repo,
             pr_number=1,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
-            status=CodeReviewEventStatus.REVIEW_COMPLETED,
             comments_posted=10,
         )
 

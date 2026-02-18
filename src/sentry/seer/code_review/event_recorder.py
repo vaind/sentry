@@ -5,6 +5,8 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
+from django.db import IntegrityError
+
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 
 logger = logging.getLogger(__name__)
@@ -139,9 +141,9 @@ def create_event_record(
             **trigger_metadata,
             **timestamps,
         )
-    except Exception:
-        logger.exception(
-            "seer.code_review.event_recorder.create_failed",
+    except IntegrityError:
+        logger.info(
+            "seer.code_review.event_recorder.create_duplicate",
             extra={
                 "organization_id": organization_id,
                 "repository_id": repository_id,
@@ -170,16 +172,7 @@ def update_event_status(
     if timestamp_field:
         update_fields[timestamp_field] = now
 
-    try:
-        CodeReviewEvent.objects.filter(id=event_record.id).update(**update_fields)
-    except Exception:
-        logger.exception(
-            "seer.code_review.event_recorder.update_failed",
-            extra={
-                "event_record_id": event_record.id,
-                "status": status,
-            },
-        )
+    CodeReviewEvent.objects.filter(id=event_record.id).update(**update_fields)
 
 
 def find_event_by_trigger_id(trigger_id: str) -> CodeReviewEvent | None:

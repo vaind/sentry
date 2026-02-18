@@ -146,6 +146,10 @@ def handle_pull_request_event(
 
     # Allow CLOSED actions for draft PRs so Seer gets cleanup notifications
     if action != PullRequestAction.CLOSED and pull_request.get("draft") is True:
+        record_webhook_filtered(
+            github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
+        )
+        update_event_status(event_record, "webhook_filtered", denial_reason="draft_pr")
         return
 
     pr_number = pull_request.get("number")

@@ -22,9 +22,22 @@ RETENTION_DAYS = 90
 )
 def cleanup_old_code_review_events() -> None:
     cutoff = timezone.now() - timedelta(days=RETENTION_DAYS)
-    deleted_count, _ = CodeReviewEvent.objects.filter(date_added__lt=cutoff).delete()
-    if deleted_count:
+    batch_size = 1000
+    total_deleted = 0
+
+    while True:
+        batch_ids = list(
+            CodeReviewEvent.objects.filter(date_added__lt=cutoff).values_list("id", flat=True)[
+                :batch_size
+            ]
+        )
+        if not batch_ids:
+            break
+        deleted_count, _ = CodeReviewEvent.objects.filter(id__in=batch_ids).delete()
+        total_deleted += deleted_count
+
+    if total_deleted:
         logger.info(
             "seer.code_review.cleanup.completed",
-            extra={"deleted_count": deleted_count, "cutoff": cutoff.isoformat()},
+            extra={"deleted_count": total_deleted, "cutoff": cutoff.isoformat()},
         )

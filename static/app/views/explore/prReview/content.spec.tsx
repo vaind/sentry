@@ -1,6 +1,6 @@
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
-import {render, screen, waitFor} from 'sentry-test/reactTestingLibrary';
+import {render, screen} from 'sentry-test/reactTestingLibrary';
 
 import PrReviewContent from 'sentry/views/explore/prReview/content';
 
@@ -102,9 +102,7 @@ describe('PrReviewContent', () => {
 
     render(<PrReviewContent />, {organization});
 
-    await waitFor(() => {
-      expect(screen.getByText('10')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('10')).toBeInTheDocument();
     expect(screen.getByText('Total PRs')).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
     expect(screen.getByText('2 skipped')).toBeInTheDocument();

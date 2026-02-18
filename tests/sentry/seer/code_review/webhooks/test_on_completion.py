@@ -1,4 +1,4 @@
-from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.code_review_event import CodeReviewEventStatus
 from sentry.seer.code_review.webhooks.on_completion import process_pr_review_completion
 from sentry.testutils.cases import TestCase
 
@@ -9,11 +9,9 @@ class TestProcessPrReviewCompletion(TestCase):
         self.repo = self.create_repo(project=self.project, name="owner/repo")
 
     def test_updates_event_on_completion(self) -> None:
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=self.repo,
             trigger_id="match-by-delivery",
             pr_number=42,
             status=CodeReviewEventStatus.SENT_TO_SEER,
@@ -45,11 +43,9 @@ class TestProcessPrReviewCompletion(TestCase):
         )
 
     def test_maps_failed_status(self) -> None:
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=self.repo,
             trigger_id="fail-delivery",
             pr_number=10,
             status=CodeReviewEventStatus.SENT_TO_SEER,
@@ -70,11 +66,9 @@ class TestProcessPrReviewCompletion(TestCase):
         assert record.review_result == {"error_message": "Seer internal error"}
 
     def test_maps_started_status(self) -> None:
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=self.repo,
             trigger_id="started-delivery",
             pr_number=11,
             status=CodeReviewEventStatus.SENT_TO_SEER,
@@ -95,11 +89,9 @@ class TestProcessPrReviewCompletion(TestCase):
         assert record.review_started_at is not None
 
     def test_parses_timestamps(self) -> None:
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=self.repo,
             trigger_id="ts-delivery",
             pr_number=12,
             status=CodeReviewEventStatus.SENT_TO_SEER,
@@ -121,11 +113,9 @@ class TestProcessPrReviewCompletion(TestCase):
         assert record.review_completed_at is not None
 
     def test_ignores_invalid_timestamps(self) -> None:
-        record = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=self.repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
+        record = self.create_code_review_event(
+            organization=self.organization,
+            repository=self.repo,
             trigger_id="bad-ts-delivery",
             pr_number=13,
             status=CodeReviewEventStatus.SENT_TO_SEER,

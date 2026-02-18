@@ -10,13 +10,7 @@ from sentry.testutils.cases import TestCase
 class TestCleanupOldCodeReviewEvents(TestCase):
     def test_deletes_old_events(self) -> None:
         repo = self.create_repo(project=self.project)
-        old_event = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
-            status=CodeReviewEventStatus.REVIEW_COMPLETED,
-        )
+        old_event = self.create_code_review_event(organization=self.organization, repository=repo)
         # Manually set date_added to beyond retention period
         CodeReviewEvent.objects.filter(id=old_event.id).update(
             date_added=timezone.now() - timedelta(days=RETENTION_DAYS + 1)
@@ -28,12 +22,8 @@ class TestCleanupOldCodeReviewEvents(TestCase):
 
     def test_keeps_recent_events(self) -> None:
         repo = self.create_repo(project=self.project)
-        recent_event = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
-            status=CodeReviewEventStatus.REVIEW_COMPLETED,
+        recent_event = self.create_code_review_event(
+            organization=self.organization, repository=repo
         )
 
         cleanup_old_code_review_events()
@@ -47,21 +37,14 @@ class TestCleanupOldCodeReviewEvents(TestCase):
     def test_mixed_old_and_new(self) -> None:
         repo = self.create_repo(project=self.project)
 
-        old_event = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
-            trigger_event_action="opened",
-            status=CodeReviewEventStatus.REVIEW_COMPLETED,
-        )
+        old_event = self.create_code_review_event(organization=self.organization, repository=repo)
         CodeReviewEvent.objects.filter(id=old_event.id).update(
             date_added=timezone.now() - timedelta(days=RETENTION_DAYS + 10)
         )
 
-        new_event = CodeReviewEvent.objects.create(
-            organization_id=self.organization.id,
-            repository_id=repo.id,
-            trigger_event_type="pull_request",
+        new_event = self.create_code_review_event(
+            organization=self.organization,
+            repository=repo,
             trigger_event_action="synchronize",
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
