@@ -52,6 +52,7 @@ class SeerActionType(SentryAppActionType):
     IMPACT_ASSESSMENT_STARTED = "impact_assessment_started"
     IMPACT_ASSESSMENT_COMPLETED = "impact_assessment_completed"
     PR_CREATED = "pr_created"
+    PR_REVIEW_COMPLETED = "pr_review_completed"
 
 
 class SentryAppResourceType(StrEnum):

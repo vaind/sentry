@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Any
 
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.tasks.base import instrumented_task
+from sentry.taskworker.namespaces import seer_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -25,33 +27,35 @@ def _parse_timestamp(value: str | None) -> datetime | None:
         return None
 
 
-def report_code_review_result(
-    *,
-    trigger_id: str,
-    seer_run_id: str,
-    status: str,
-    comments_posted: int,
-    error_message: str | None = None,
-    started_at: str | None = None,
-    completed_at: str | None = None,
-) -> dict:
+@instrumented_task(
+    name="sentry.seer.code_review.webhooks.on_completion.process_pr_review_completion",
+    namespace=seer_tasks,
+    retry=None,
+)
+def process_pr_review_completion(*, payload: dict[str, Any]) -> None:
     """
-    Called by Seer after completing (or failing) a code review.
-    Updates the corresponding CodeReviewEvent record matched by trigger_id.
+    Celery task that processes the seer.pr_review_completed webhook payload
+    and updates the corresponding CodeReviewEvent record.
     """
-    event_record = CodeReviewEvent.objects.filter(
-        trigger_id=trigger_id,
-    ).first()
+    trigger_id = payload.get("trigger_id")
+    seer_run_id = payload.get("seer_run_id")
+    status = payload.get("status", "completed")
+    comments_posted = payload.get("comments_posted", 0)
+    error_message = payload.get("error_message")
+    started_at = payload.get("started_at")
+    completed_at = payload.get("completed_at")
+
+    event_record = CodeReviewEvent.objects.filter(trigger_id=trigger_id).first()
 
     if event_record is None:
         logger.warning(
-            "seer.code_review.callback.no_matching_event",
+            "seer.code_review.webhook.no_matching_event",
             extra={
                 "trigger_id": trigger_id,
                 "seer_run_id": seer_run_id,
             },
         )
-        return {"status": "not_found"}
+        return
 
     new_status = SEER_STATUS_MAP.get(status, CodeReviewEventStatus.REVIEW_COMPLETED)
 
@@ -73,5 +77,3 @@ def report_code_review_result(
         update_fields["review_result"] = {"error_message": error_message}
 
     CodeReviewEvent.objects.filter(id=event_record.id).update(**update_fields)
-
-    return {"status": "ok"}

@@ -14,26 +14,6 @@ from sentry.api.serializers import serialize
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.repository import Repository
 from sentry.seer.code_review.api.serializers.code_review_event import CodeReviewEventSerializer
-from sentry.seer.code_review.rpc_queries import get_pr_comments
-
-
-def _fetch_pr_comments(repo_id: int, pr_number: int) -> tuple[list[dict], bool]:
-    """Fetch PR comments from Seer. Returns (comments, has_error)."""
-    try:
-        repo = Repository.objects.get(id=repo_id)
-    except Repository.DoesNotExist:
-        return [], True
-
-    repo_name_parts = repo.name.split("/", 1)
-    if len(repo_name_parts) != 2:
-        return [], False
-
-    owner, repo_name = repo_name_parts
-    comments = get_pr_comments("github", owner, repo_name, pr_number)
-    if comments is None:
-        return [], True
-
-    return comments, False
 
 
 @region_silo_endpoint
@@ -71,8 +51,6 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
         except Repository.DoesNotExist:
             repo_name = None
 
-        comments, comments_error = _fetch_pr_comments(repo_id_int, pr_number_int)
-
         summary = events.aggregate(
             total_reviews=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_COMPLETED)),
             total_failed=Count("id", filter=Q(status=CodeReviewEventStatus.REVIEW_FAILED)),
@@ -109,8 +87,6 @@ class OrganizationCodeReviewPRDetailsEndpoint(OrganizationEndpoint):
                 "prUrl": latest_event.pr_url,
                 "prState": latest_event.pr_state,
                 "events": serialize(list(events), request.user, CodeReviewEventSerializer()),
-                "comments": comments,
-                "commentsError": comments_error,
                 "summary": {
                     "totalReviews": summary["total_reviews"],
                     "totalFailed": summary["total_failed"],

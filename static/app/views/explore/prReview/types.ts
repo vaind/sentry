@@ -51,8 +51,6 @@ export interface CodeReviewPRSummary {
 }
 
 export interface CodeReviewPRDetails {
-  comments: CodeReviewComment[];
-  commentsError: boolean;
   events: CodeReviewEvent[];
   prAuthor: string | null;
   prNumber: number;
@@ -62,14 +60,6 @@ export interface CodeReviewPRDetails {
   repositoryId: string;
   repositoryName: string | null;
   summary: CodeReviewPRSummary;
-}
-
-export interface CodeReviewComment {
-  body: string;
-  file?: string;
-  line?: number;
-  runId?: string;
-  severity?: string;
 }
 
 export interface CodeReviewRepository {

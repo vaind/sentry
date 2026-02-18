@@ -102,7 +102,6 @@ export default function PrReviewDetail() {
             <Flex direction="column" gap="lg">
               <PRDetailsSection pr={pr} />
               <SummaryCards pr={pr} />
-              <CommentsSection pr={pr} />
               <ReviewEventsSection pr={pr} />
             </Flex>
           </Layout.Main>
@@ -155,50 +154,6 @@ function SummaryCards({pr}: {pr: CodeReviewPRDetails}) {
             : formatDurationMs(summary.avgReviewDurationMs)
         }
       />
-    </Flex>
-  );
-}
-
-function CommentsSection({pr}: {pr: CodeReviewPRDetails}) {
-  if (pr.commentsError) {
-    return (
-      <Flex direction="column" gap="sm">
-        <Heading as="h3">{t('Comments')}</Heading>
-        <Text variant="muted">
-          {t('Review comments are not available at this time.')}
-        </Text>
-      </Flex>
-    );
-  }
-
-  if (pr.comments.length === 0) {
-    return (
-      <Flex direction="column" gap="sm">
-        <Heading as="h3">{t('Comments')}</Heading>
-        <Text variant="muted">{t('Seer found no issues in this pull request.')}</Text>
-      </Flex>
-    );
-  }
-
-  return (
-    <Flex direction="column" gap="sm">
-      <Heading as="h3">{t('Comments')}</Heading>
-      {pr.comments.map((comment, index) => (
-        <Flex key={index} direction="column" gap="xs" padding="md">
-          {comment.file && (
-            <Text size="sm" bold>
-              {comment.file}
-              {comment.line ? `:${comment.line}` : ''}
-            </Text>
-          )}
-          {comment.severity && (
-            <Text variant="muted" size="sm">
-              {comment.severity}
-            </Text>
-          )}
-          <Text>{comment.body}</Text>
-        </Flex>
-      ))}
     </Flex>
   );
 }
