@@ -1,7 +1,3 @@
-"""
-Handler for GitHub issue_comment webhook events.
-"""
-
 from __future__ import annotations
 
 import enum
@@ -94,8 +90,6 @@ def handle_issue_comment_event(
         return
 
     if comment_id:
-        # We shouldn't ever need to delete :eyes: from the PR description unless Seer fails to do so.
-        # But if we're already deleting :tada: we might as well delete :eyes: if we come across it.
         reactions_to_delete = [GitHubReaction.HOORAY, GitHubReaction.EYES]
         if is_github_rate_limit_sensitive(organization.slug):
             reactions_to_delete = []

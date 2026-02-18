@@ -21,8 +21,6 @@ RETENTION_DAYS = 90
     silo_mode=SiloMode.REGION,
 )
 def cleanup_old_code_review_events() -> None:
-    """Delete CodeReviewEvent records older than 90 days."""
-
     cutoff = timezone.now() - timedelta(days=RETENTION_DAYS)
     deleted_count, _ = CodeReviewEvent.objects.filter(date_added__lt=cutoff).delete()
     if deleted_count:

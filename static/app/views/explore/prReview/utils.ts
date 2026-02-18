@@ -1,8 +1,5 @@
 import type {TagVariant} from 'sentry/utils/theme/types';
 
-/**
- * Maps a code review event status to a Tag variant for visual differentiation.
- */
 export function statusToTagVariant(status: string): TagVariant {
   switch (status) {
     case 'review_completed':
@@ -20,9 +17,6 @@ export function statusToTagVariant(status: string): TagVariant {
   }
 }
 
-/**
- * Maps a PR state (open/closed/merged) to a Tag variant.
- */
 export function prStateToTagVariant(state: string | null): TagVariant {
   switch (state) {
     case 'open':
@@ -36,17 +30,12 @@ export function prStateToTagVariant(state: string | null): TagVariant {
   }
 }
 
-/**
- * Converts a snake_case status string to Title Case for display.
- */
+/** Converts snake_case to Title Case (e.g. "review_completed" -> "Review Completed"). */
 export function formatStatus(status: string): string {
   return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-/**
- * Formats a duration in milliseconds to a human-readable string.
- * e.g. 1500 → "1.5s", 65000 → "1m 5s", 3600000 → "1h 0m"
- */
+/** e.g. 1500 -> "2s", 65000 -> "1m 5s", 3600000 -> "1h 0m" */
 export function formatDurationMs(ms: number): string {
   if (ms < 1000) {
     return `${ms}ms`;

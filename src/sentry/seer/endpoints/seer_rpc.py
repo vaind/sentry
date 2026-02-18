@@ -508,20 +508,9 @@ def get_github_enterprise_integration_config(
 
 def send_seer_webhook(*, event_name: str, organization_id: int, payload: dict) -> dict:
     """
-    Handles receipt (in Sentry, from Seer) of a seer webhook event for an organization.
-
-    Previously, this just broadcast webhooks to the relevant Sentry Apps.
-    Now, it allows other Sentry features to leverage this signal.
-
-    Args:
-        event_name: The sub-name of seer event (e.g., "root_cause_started")
-        organization_id: The ID of the organization to send the webhook for
-        payload: The webhook payload data
-
-    Returns:
-        dict: Status of the webhook sending operation
+    Handle a Seer webhook event by dispatching to internal consumers
+    (e.g. pr_review_completed, autofix) and broadcasting to Sentry Apps.
     """
-    # Validate event_name by constructing the full event type and checking if it's valid
     from sentry.sentry_apps.metrics import SentryAppEventType
 
     event_type = f"seer.{event_name}"

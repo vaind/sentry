@@ -164,7 +164,6 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
               interval: LABEL_INTERVAL[timeRange] ?? 0,
               showMinLabel: true,
               showMaxLabel: true,
-              formatter: (value: string) => value,
               color: theme.tokens.content.secondary,
               fontFamily: theme.font.family.sans,
             },

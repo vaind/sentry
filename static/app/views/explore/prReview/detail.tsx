@@ -159,8 +159,7 @@ function SummaryCards({pr}: {pr: CodeReviewPRDetails}) {
 }
 
 function ReviewEventsSection({pr}: {pr: CodeReviewPRDetails}) {
-  // API returns newest-first; display oldest-first for chronological reading
-  const sortedEvents = [...pr.events].reverse();
+  const sortedEvents = [...pr.events].reverse(); // chronological order
 
   return (
     <Flex direction="column" gap="sm">
@@ -214,17 +213,13 @@ function EventRow({event, prUrl}: {event: CodeReviewEvent; prUrl: string | null}
       <div>{event.triggerUser ?? '—'}</div>
       <div>
         {commitShort ? (
-          commitUrl ? (
-            <ExternalLink href={commitUrl}>
-              <Text size="sm" style={{fontFamily: 'monospace'}}>
-                {commitShort}
-              </Text>
-            </ExternalLink>
-          ) : (
-            <Text size="sm" style={{fontFamily: 'monospace'}}>
-              {commitShort}
-            </Text>
-          )
+          <Text size="sm" style={{fontFamily: 'monospace'}}>
+            {commitUrl ? (
+              <ExternalLink href={commitUrl}>{commitShort}</ExternalLink>
+            ) : (
+              commitShort
+            )}
+          </Text>
         ) : (
           '—'
         )}
@@ -246,14 +241,7 @@ function EventRow({event, prUrl}: {event: CodeReviewEvent; prUrl: string | null}
 }
 
 function PipelineTimeline({event}: {event: CodeReviewEvent}) {
-  let lastReachedIndex = -1;
-  for (let i = PIPELINE_STAGES.length - 1; i >= 0; i--) {
-    const key = PIPELINE_STAGES[i]!.key;
-    if (event[key]) {
-      lastReachedIndex = i;
-      break;
-    }
-  }
+  const lastReachedIndex = PIPELINE_STAGES.findLastIndex(stage => event[stage.key]);
 
   return (
     <Flex direction="column" gap="xs" padding="sm">
@@ -284,9 +272,6 @@ function PipelineTimeline({event}: {event: CodeReviewEvent}) {
   );
 }
 
-/**
- * Returns the time span (first and last event time) from a list of events.
- */
 function getTimeSpan(events: CodeReviewEvent[]): {first: string; last: string} | null {
   if (events.length === 0) {
     return null;
@@ -295,10 +280,7 @@ function getTimeSpan(events: CodeReviewEvent[]): {first: string; last: string} |
   return {first: times[0]!, last: times[times.length - 1]!};
 }
 
-/**
- * Builds a commit URL from a PR URL by replacing the PR path with commit path.
- * e.g. "https://github.com/owner/repo/pull/123" + "abc123" → "https://github.com/owner/repo/commit/abc123"
- */
+/** e.g. "https://github.com/owner/repo/pull/123" + "abc123" -> ".../commit/abc123" */
 function buildCommitUrl(prUrl: string, commitSha: string): string | null {
   const match = prUrl.match(/^(https:\/\/github\.com\/[^/]+\/[^/]+)\//);
   if (!match) {

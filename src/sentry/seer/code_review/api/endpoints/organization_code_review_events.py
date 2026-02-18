@@ -71,16 +71,14 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             on_results=lambda groups: self._enrich_groups(groups, queryset),
         )
 
-    def _enrich_groups(self, groups: list[dict], base_queryset: CodeReviewEvent) -> list[dict]:
-        """Fetch latest event per PR group for metadata fields."""
+    def _enrich_groups(self, groups: list[dict], base_queryset) -> list[dict]:
+        """Attach latest event metadata (title, author, status) to each PR group."""
         if not groups:
             return []
 
         repo_ids = {g["repository_id"] for g in groups}
         repos = {r.id: r for r in Repository.objects.filter(id__in=repo_ids)}
 
-        # Batch-fetch the latest event per (repository_id, pr_number)
-        # by fetching the max id per group (the most recently created event)
         pr_keys = [(g["repository_id"], g["pr_number"]) for g in groups]
         latest_event_ids = []
         for repo_id, pr_num in pr_keys:

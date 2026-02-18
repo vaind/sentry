@@ -13,8 +13,8 @@ from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.repository import Repository
 
-SKIPPED_STATUSES = Q(status=CodeReviewEventStatus.PREFLIGHT_DENIED) | Q(
-    status=CodeReviewEventStatus.WEBHOOK_FILTERED
+SKIPPED_STATUSES = Q(
+    status__in=[CodeReviewEventStatus.PREFLIGHT_DENIED, CodeReviewEventStatus.WEBHOOK_FILTERED]
 )
 REVIEWED_STATUSES = Q(status=CodeReviewEventStatus.REVIEW_COMPLETED)
 
@@ -32,7 +32,6 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
 
         base_queryset = CodeReviewEvent.objects.filter(organization_id=organization.id)
 
-        # Distinct repos with code review events (always unfiltered)
         repo_ids = base_queryset.values_list("repository_id", flat=True).distinct()
         repos = Repository.objects.filter(id__in=repo_ids)
         repositories = [{"id": str(r.id), "name": r.name} for r in repos.order_by("name")]
