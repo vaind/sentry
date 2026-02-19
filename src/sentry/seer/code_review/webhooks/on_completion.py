@@ -50,7 +50,7 @@ def process_pr_review_completion(*, organization_id: int, payload: dict[str, Any
         return
 
     seer_run_id = payload.get("seer_run_id")
-    status = payload.get("status", "completed")
+    status = payload.get("status")
     comments_posted = payload.get("comments_posted", 0)
     error_message = payload.get("error_message")
     started_at = payload.get("started_at")
@@ -74,13 +74,15 @@ def process_pr_review_completion(*, organization_id: int, payload: dict[str, Any
         )
         return
 
-    new_status = SEER_STATUS_MAP.get(status, CodeReviewEventStatus.REVIEW_COMPLETED)
-
     update_fields: dict[str, Any] = {
-        "status": new_status,
         "seer_run_id": seer_run_id,
         "comments_posted": comments_posted,
     }
+
+    if status is not None:
+        update_fields["status"] = SEER_STATUS_MAP.get(
+            status, CodeReviewEventStatus.REVIEW_COMPLETED
+        )
 
     review_started_at = _parse_timestamp(started_at)
     if review_started_at:

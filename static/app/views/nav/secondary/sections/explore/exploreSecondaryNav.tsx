@@ -138,6 +138,12 @@ export function ExploreSecondaryNav() {
               {t('Replays')}
             </SecondaryNav.Item>
           </Feature>
+          <SecondaryNav.Item
+            to={`${baseUrl}/releases/`}
+            analyticsItemName="explore_releases"
+          >
+            {t('Releases')}
+          </SecondaryNav.Item>
           <Feature features="pr-review-dashboard">
             <SecondaryNav.Item
               to={`${baseUrl}/pr-review/`}
@@ -146,12 +152,6 @@ export function ExploreSecondaryNav() {
               {t('Seer PR Reviews')}
             </SecondaryNav.Item>
           </Feature>
-          <SecondaryNav.Item
-            to={`${baseUrl}/releases/`}
-            analyticsItemName="explore_releases"
-          >
-            {t('Releases')}
-          </SecondaryNav.Item>
         </SecondaryNav.Section>
         <Feature features={['visibility-explore-view', 'performance-view']}>
           <SecondaryNav.Section id="explore-all-queries">
