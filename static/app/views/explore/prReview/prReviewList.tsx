@@ -31,20 +31,14 @@ interface Props {
   prs: CodeReviewPR[] | undefined;
 }
 
-const IGNORED_CLICK_TAGS = new Set(['a', 'input', 'button']);
-
 export function PrReviewList({prs, isLoading, pageLinks, paginationCaption}: Props) {
   const organization = useOrganization();
   const navigate = useNavigate();
 
   const handleRowClick = useCallback(
     (pr: CodeReviewPR, e: React.MouseEvent<HTMLDivElement>) => {
-      let target = e.target as HTMLElement | null;
-      while (target && target !== e.currentTarget) {
-        if (IGNORED_CLICK_TAGS.has(target.tagName.toLowerCase())) {
-          return;
-        }
-        target = target.parentElement;
+      if ((e.target as HTMLElement).closest?.('a, button, input')) {
+        return;
       }
       navigate(
         normalizeUrl(

@@ -14,7 +14,7 @@ from sentry.integrations.github.client import GitHubReaction
 from sentry.integrations.github.utils import is_github_rate_limit_sensitive
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.integrations.services.integration import RpcIntegration
-from sentry.models.code_review_event import CodeReviewEvent
+from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.models.repositorysettings import CodeReviewSettings, CodeReviewTrigger
@@ -124,7 +124,9 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
-        update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
+        update_event_status(
+            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="unsupported_action"
+        )
         return
 
     if action not in ALLOWED_ACTIONS:
@@ -132,7 +134,9 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
-        update_event_status(event_record, "webhook_filtered", denial_reason="unsupported_action")
+        update_event_status(
+            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="unsupported_action"
+        )
         return
 
     action_requires_trigger_permission = ACTIONS_REQUIRING_TRIGGER_CHECK.get(action)
@@ -141,7 +145,9 @@ def handle_pull_request_event(
         or action_requires_trigger_permission not in org_code_review_settings.triggers
     ):
         record_webhook_filtered(github_event, action_value, WebhookFilteredReason.TRIGGER_DISABLED)
-        update_event_status(event_record, "webhook_filtered", denial_reason="trigger_disabled")
+        update_event_status(
+            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="trigger_disabled"
+        )
         return
 
     # Allow CLOSED actions for draft PRs so Seer gets cleanup notifications
@@ -149,7 +155,9 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
-        update_event_status(event_record, "webhook_filtered", denial_reason="draft_pr")
+        update_event_status(
+            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="draft_pr"
+        )
         return
 
     pr_number = pull_request.get("number")

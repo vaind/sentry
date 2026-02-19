@@ -10,6 +10,7 @@ from rediscluster import RedisCluster
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.integrations.services.integration import RpcIntegration
 from sentry.integrations.types import IntegrationProviderSlug
+from sentry.models.code_review_event import CodeReviewEventStatus
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.utils.redis import redis_clusters
@@ -86,7 +87,7 @@ def handle_webhook_event(
                 raw_event_action=event.get("action", "unknown"),
                 trigger_id=github_delivery_id,
                 event=event,
-                status="preflight_denied",
+                status=CodeReviewEventStatus.PREFLIGHT_DENIED,
                 denial_reason=preflight.denial_reason.value,
             )
             if organization.slug == "sentry":
@@ -123,7 +124,7 @@ def handle_webhook_event(
         raw_event_action=event.get("action", "unknown"),
         trigger_id=github_delivery_id,
         event=event,
-        status="webhook_received",
+        status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
     )
 
     handler(

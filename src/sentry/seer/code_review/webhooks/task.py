@@ -8,6 +8,7 @@ from typing import Any
 from urllib3.exceptions import HTTPError
 
 from sentry.integrations.github.webhook_types import GithubWebhookType
+from sentry.models.code_review_event import CodeReviewEventStatus
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.seer.code_review.models import (
@@ -60,7 +61,9 @@ def schedule_task(
         record_webhook_filtered(
             github_event, github_event_action, WebhookFilteredReason.TRANSFORM_FAILED
         )
-        update_event_status(event_record, "webhook_filtered", denial_reason="transform_failed")
+        update_event_status(
+            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="transform_failed"
+        )
         return
 
     process_github_webhook_event.delay(
@@ -72,7 +75,7 @@ def schedule_task(
         repository_id=repo.id,
     )
     record_webhook_enqueued(github_event, github_event_action)
-    update_event_status(event_record, "task_enqueued")
+    update_event_status(event_record, CodeReviewEventStatus.TASK_ENQUEUED)
 
 
 @instrumented_task(
@@ -118,10 +121,10 @@ def process_github_webhook_event(
 
         log_seer_request(event_payload, github_event)
         make_seer_request(path=path, payload=payload)
-        update_event_status(event_record, "sent_to_seer")
+        update_event_status(event_record, CodeReviewEventStatus.SENT_TO_SEER)
     except Exception as e:
         status = e.__class__.__name__
-        update_event_status(event_record, "review_failed")
+        update_event_status(event_record, CodeReviewEventStatus.REVIEW_FAILED)
         # Retryable errors are automatically retried by taskworker.
         if isinstance(e, RETRYABLE_ERRORS):
             task = current_task()

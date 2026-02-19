@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import Count, Max, OuterRef, Q, Subquery, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import Coalesce
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -35,10 +35,6 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
         if repository_ids:
             queryset = queryset.filter(repository_id__in=repository_ids)
 
-        pr_state = request.GET.get("prState")
-        if pr_state:
-            queryset = queryset.filter(pr_state=pr_state)
-
         trigger_type = request.GET.get("triggerType")
         if trigger_type:
             queryset = queryset.filter(trigger=trigger_type)
@@ -62,6 +58,8 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             .order_by("-last_activity")
         )
 
+        pr_state = request.GET.get("prState")
+
         return self.paginate(
             request=request,
             queryset=pr_groups,
@@ -69,11 +67,17 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             paginator_cls=OffsetPaginator,
             default_per_page=25,
             count_hits=True,
-            on_results=lambda groups: self._enrich_groups(groups, queryset, organization.id),
+            on_results=lambda groups: self._enrich_groups(
+                groups, queryset, organization.id, pr_state
+            ),
         )
 
     def _enrich_groups(
-        self, groups: list[dict[str, Any]], base_queryset: Any, organization_id: int
+        self,
+        groups: list[dict[str, Any]],
+        base_queryset: Any,
+        organization_id: int,
+        pr_state_filter: str | None = None,
     ) -> list[dict[str, Any]]:
         """Attach latest event metadata (title, author, status) to each PR group."""
         if not groups:
@@ -85,33 +89,22 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             for r in Repository.objects.filter(id__in=repo_ids, organization_id=organization_id)
         }
 
-        pr_keys = [(g["repository_id"], g["pr_number"]) for g in groups]
-
-        # Single query to get latest event ID per (repository_id, pr_number)
-        latest_ids_subquery = (
-            base_queryset.filter(
-                repository_id=OuterRef("repository_id"),
-                pr_number=OuterRef("pr_number"),
-            )
-            .order_by("-trigger_at")
-            .values("id")[:1]
-        )
-
+        # Build a single OR filter for all (repo_id, pr_number) pairs
         pr_filter = Q()
-        for repo_id, pr_num in pr_keys:
-            pr_filter |= Q(repository_id=repo_id, pr_number=pr_num)
+        for g in groups:
+            pr_filter |= Q(repository_id=g["repository_id"], pr_number=g["pr_number"])
 
-        latest_event_ids = (
-            base_queryset.filter(pr_filter)
-            .values("repository_id", "pr_number")
-            .annotate(latest_id=Subquery(latest_ids_subquery))
-            .values_list("latest_id", flat=True)
-            .distinct()
+        # Fetch all candidate events in one query, ordered so the latest per PR comes first
+        candidate_events = base_queryset.filter(pr_filter).order_by(
+            "repository_id", "pr_number", "-trigger_at"
         )
 
-        latest_events_by_key = {}
-        for event in CodeReviewEvent.objects.filter(id__in=latest_event_ids):
-            latest_events_by_key[(event.repository_id, event.pr_number)] = event
+        # Pick the latest event per (repo_id, pr_number)
+        latest_events_by_key: dict[tuple[int, int], CodeReviewEvent] = {}
+        for event in candidate_events:
+            key = (event.repository_id, event.pr_number)
+            if key not in latest_events_by_key:
+                latest_events_by_key[key] = event
 
         results = []
         for group in groups:
@@ -119,6 +112,11 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             pr_number = group["pr_number"]
             repo = repos.get(repo_id)
             latest_event = latest_events_by_key.get((repo_id, pr_number))
+
+            # Filter by pr_state from the latest event rather than from all events,
+            # since pr_state is denormalized and only the latest event reflects current state
+            if pr_state_filter and (not latest_event or latest_event.pr_state != pr_state_filter):
+                continue
 
             results.append(
                 {
