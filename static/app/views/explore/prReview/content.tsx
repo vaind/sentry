@@ -38,7 +38,11 @@ export default function PrReviewContent() {
     if (repositoryIds.length > 0) {
       params.repositoryId = repositoryIds;
     }
-    params.start = parseStatsPeriod(timeRange).start;
+    try {
+      params.start = parseStatsPeriod(timeRange).start;
+    } catch {
+      params.start = parseStatsPeriod('14d').start;
+    }
     return params;
   }, [status, repositoryIds, timeRange]);
 

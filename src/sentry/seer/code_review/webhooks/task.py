@@ -68,6 +68,8 @@ def schedule_task(
         event_payload=transformed_event,
         enqueued_at_str=datetime.now(timezone.utc).isoformat(),
         trigger_id=trigger_id,
+        organization_id=organization.id,
+        repository_id=repo.id,
     )
     record_webhook_enqueued(github_event, github_event_action)
     update_event_status(event_record, "task_enqueued")
@@ -85,10 +87,14 @@ def process_github_webhook_event(
     github_event: str,
     event_payload: Mapping[str, Any],
     trigger_id: str | None = None,
+    organization_id: int | None = None,
+    repository_id: int | None = None,
     **kwargs: Any,
 ) -> None:
     """Validate and forward webhook event payload to Seer."""
-    event_record = find_event_by_trigger_id(trigger_id) if trigger_id else None
+    event_record = (
+        find_event_by_trigger_id(trigger_id, organization_id, repository_id) if trigger_id else None
+    )
 
     status = "success"
     should_record_latency = True

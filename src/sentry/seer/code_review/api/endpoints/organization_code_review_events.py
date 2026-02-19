@@ -69,18 +69,21 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
             paginator_cls=OffsetPaginator,
             default_per_page=25,
             count_hits=True,
-            on_results=lambda groups: self._enrich_groups(groups, queryset),
+            on_results=lambda groups: self._enrich_groups(groups, queryset, organization.id),
         )
 
     def _enrich_groups(
-        self, groups: list[dict[str, Any]], base_queryset: Any
+        self, groups: list[dict[str, Any]], base_queryset: Any, organization_id: int
     ) -> list[dict[str, Any]]:
         """Attach latest event metadata (title, author, status) to each PR group."""
         if not groups:
             return []
 
         repo_ids = {g["repository_id"] for g in groups}
-        repos = {r.id: r for r in Repository.objects.filter(id__in=repo_ids)}
+        repos = {
+            r.id: r
+            for r in Repository.objects.filter(id__in=repo_ids, organization_id=organization_id)
+        }
 
         pr_keys = [(g["repository_id"], g["pr_number"]) for g in groups]
 

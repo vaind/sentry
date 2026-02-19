@@ -34,7 +34,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         base_queryset = CodeReviewEvent.objects.filter(organization_id=organization.id)
 
         repo_ids = base_queryset.values_list("repository_id", flat=True).distinct()
-        repos = Repository.objects.filter(id__in=repo_ids)
+        repos = Repository.objects.filter(id__in=repo_ids, organization_id=organization.id)
         repositories = [{"id": str(r.id), "name": r.name} for r in repos.order_by("name")]
 
         queryset = base_queryset
@@ -60,7 +60,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         total_reviews = review_events.count()
         total_comments = review_events.aggregate(total=Coalesce(Sum("comments_posted"), 0))["total"]
 
-        # PR-level stats: count distinct PRs by their latest event status
+        # PR-level stats: count distinct PRs and skipped PRs in SQL
         pr_stats = (
             queryset.filter(pr_number__isnull=False)
             .values("repository_id", "pr_number")
@@ -69,14 +69,9 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
                 has_skipped=Count("id", filter=SKIPPED_STATUSES),
             )
         )
-
-        total_prs = 0
-        skipped_prs = 0
-        for pr in pr_stats:
-            total_prs += 1
-            # A PR is "skipped" only if it was never reviewed
-            if pr["has_skipped"] > 0 and pr["has_reviewed"] == 0:
-                skipped_prs += 1
+        total_prs = pr_stats.count()
+        # A PR is "skipped" only if it has skipped events but was never reviewed
+        skipped_prs = pr_stats.filter(has_skipped__gt=0, has_reviewed=0).count()
 
         # Author stats: distinct authors and top authors by PR count
         author_prs = (

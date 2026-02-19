@@ -183,10 +183,19 @@ def update_event_status(
     CodeReviewEvent.objects.filter(id=event_record.id).update(**update_fields)
 
 
-def find_event_by_trigger_id(trigger_id: str) -> CodeReviewEvent | None:
+def find_event_by_trigger_id(
+    trigger_id: str,
+    organization_id: int | None = None,
+    repository_id: int | None = None,
+) -> CodeReviewEvent | None:
     if not trigger_id:
         return None
-    return CodeReviewEvent.objects.filter(trigger_id=trigger_id).first()
+    filters: dict[str, Any] = {"trigger_id": trigger_id}
+    if organization_id is not None:
+        filters["organization_id"] = organization_id
+    if repository_id is not None:
+        filters["repository_id"] = repository_id
+    return CodeReviewEvent.objects.filter(**filters).first()
 
 
 _STATUS_TIMESTAMP_MAP: dict[str, str] = {
