@@ -280,6 +280,13 @@ class Fixtures:
             project = self.project
         return Factories.create_repo(project, *args, **kwargs)
 
+    def create_code_review_event(self, organization=None, repository=None, **kwargs):
+        if organization is None:
+            organization = self.organization
+        if repository is None:
+            repository = self.create_repo(project=self.project)
+        return Factories.create_code_review_event(organization, repository, **kwargs)
+
     def create_repository_settings(self, *args, **kwargs):
         return Factories.create_repository_settings(*args, **kwargs)
 

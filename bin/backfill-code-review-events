@@ -1,0 +1,338 @@
+#!/usr/bin/env python
+"""
+DEV ONLY: Backfill CodeReviewEvent records.
+
+Usage:
+    1. Export as CSV:
+        https://redash.getsentry.net/queries/10580/source
+
+    2. Run this script:
+        sentry exec bin/backfill-code-review-events events.csv
+        sentry exec bin/backfill-code-review-events events.csv --dry-run
+"""
+
+from sentry.runner import configure
+
+configure()
+
+import argparse
+import ast
+import csv
+import logging
+import os
+import subprocess
+from datetime import datetime, timezone
+
+from sentry.integrations.models.organization_integration import OrganizationIntegration
+from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.organization import Organization
+from sentry.models.repository import Repository
+from sentry.utils import json
+
+logger = logging.getLogger(__name__)
+
+GITHUB_GRAPHQL_BATCH_SIZE = 100
+
+
+def parse_dt(value: str | None) -> datetime | None:
+    if not value or value in ("None", ""):
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_dict_value(raw: str | None) -> dict | None:
+    """Parse a Python repr dict or JSON string, stripping null bytes if present."""
+    if not raw or raw in ("None", ""):
+        return None
+    cleaned = raw.replace("\x00", "").replace("\\u0000", "")
+    # Try ast.literal_eval first (handles Python repr with single quotes)
+    try:
+        result = ast.literal_eval(cleaned)
+        if isinstance(result, dict):
+            return result
+    except (ValueError, SyntaxError):
+        pass
+    # Fall back to JSON
+    try:
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+class PrInfo:
+    __slots__ = ("title", "state")
+
+    def __init__(self, title: str, state: str):
+        self.title = title
+        self.state = state
+
+
+def fetch_pr_info(owner: str, repo: str, pr_numbers: list[int]) -> dict[int, PrInfo]:
+    """Batch-fetch PR titles and states using gh CLI GraphQL API."""
+    results: dict[int, PrInfo] = {}
+    for batch_start in range(0, len(pr_numbers), GITHUB_GRAPHQL_BATCH_SIZE):
+        batch = pr_numbers[batch_start : batch_start + GITHUB_GRAPHQL_BATCH_SIZE]
+        # Build GraphQL query with aliases for each PR
+        fragments = []
+        for i, pr_num in enumerate(batch):
+            fragments.append(f"pr{i}: pullRequest(number: {pr_num}) {{ number title state }}")
+        query = f"""{{
+  repository(owner: "{owner}", name: "{repo}") {{
+    {chr(10).join(f"    {f}" for f in fragments)}
+  }}
+}}"""
+        try:
+            result = subprocess.run(
+                ["gh", "api", "graphql", "-f", f"query={query}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            data = json.loads(result.stdout)
+            repo_data = data.get("data", {}).get("repository", {})
+            for value in repo_data.values():
+                if value and "number" in value:
+                    # GraphQL returns state as OPEN, CLOSED, MERGED — lowercase it
+                    state = (value.get("state") or "").lower()
+                    results[value["number"]] = PrInfo(
+                        title=value.get("title", ""),
+                        state=state,
+                    )
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+            logger.exception("Failed to fetch PR info batch starting at %d", batch_start)
+    return results
+
+
+def main():
+    # Support both argparse (direct invocation) and env vars (sentry/getsentry exec)
+    csv_file = os.environ.get("BACKFILL_CSV")
+    dry_run = os.environ.get("BACKFILL_DRY_RUN") == "1"
+
+    if not csv_file:
+        parser = argparse.ArgumentParser(
+            description="Backfill CodeReviewEvent from Seer CSV export"
+        )
+        parser.add_argument("csv_file", help="CSV file exported from the Seer events query")
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Print what would be created without writing to DB",
+        )
+        args = parser.parse_args()
+        csv_file = args.csv_file
+        dry_run = args.dry_run
+
+    with open(csv_file) as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+    logger.info("Read %d rows from %s", len(rows), csv_file)
+
+    # Collect unique PR numbers per repo for title fetching
+    pr_numbers_by_repo: dict[str, set[int]] = {}
+    for row in rows:
+        repo_full_name = row.get("repo_full_name", "").strip()
+        pr_number = row.get("pr_number", "").strip()
+        if repo_full_name and pr_number:
+            pr_numbers_by_repo.setdefault(repo_full_name, set()).add(int(pr_number))
+
+    # Fetch PR info (titles, states) via GitHub GraphQL
+    pr_info_by_repo: dict[str, dict[int, PrInfo]] = {}
+    for repo_full_name, pr_nums in pr_numbers_by_repo.items():
+        owner, _, repo_name = repo_full_name.partition("/")
+        if owner and repo_name:
+            unique_prs = sorted(pr_nums)
+            logger.info("Fetching %d PR info for %s", len(unique_prs), repo_full_name)
+            pr_info_by_repo[repo_full_name] = fetch_pr_info(owner, repo_name, unique_prs)
+            logger.info(
+                "Fetched %d PR info for %s",
+                len(pr_info_by_repo[repo_full_name]),
+                repo_full_name,
+            )
+
+    # Resolve the local org and GitHub integration for creating missing repos.
+    # Seer metadata has prod org_id=1 which won't match the local dev DB.
+    # BACKFILL_ORG_SLUG lets the user specify their local org (defaults to "sentry").
+    org_slug = os.environ.get("BACKFILL_ORG_SLUG", "default")
+    try:
+        local_org = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        logger.warning(
+            "Organization with slug '%s' not found; set BACKFILL_ORG_SLUG to your local org slug",
+            org_slug,
+        )
+        local_org = None
+
+    local_integration_id: int | None = None
+    if local_org:
+        oi = (
+            OrganizationIntegration.objects.filter(
+                organization_id=local_org.id,
+                integration__provider="github",
+            )
+            .select_related("integration")
+            .first()
+        )
+        if oi:
+            local_integration_id = oi.integration_id
+        else:
+            logger.warning("No GitHub integration found for org '%s'", org_slug)
+
+    repo_cache: dict[str, Repository | None] = {}
+
+    created = skipped = errors = 0
+
+    for i, row in enumerate(rows):
+        run_id = row.get("run_id", "").strip()
+        repo_full_name = row.get("repo_full_name", "").strip()
+        pr_number = row.get("pr_number", "").strip()
+
+        if not run_id or not repo_full_name or not pr_number:
+            logger.warning("Row %d: skipping, missing run_id/repo/pr_number", i + 1)
+            errors += 1
+            continue
+
+        # Parse JSON columns early — needed for repo creation and timestamps
+        metadata = parse_dict_value(row.get("seer_event_metadata"))
+        state = parse_dict_value(row.get("run_state_value"))
+
+        # Look up or create repository
+        if repo_full_name not in repo_cache:
+            try:
+                repo_cache[repo_full_name] = Repository.objects.get(name=repo_full_name)
+            except Repository.DoesNotExist:
+                # Extract repo metadata from run_state_value.request.repo
+                repo_meta = None
+                if state:
+                    request_data = state.get("request", {})
+                    if isinstance(request_data, dict):
+                        repo_meta = request_data.get("repo")
+                if repo_meta and isinstance(repo_meta, dict) and local_org:
+                    repo_obj, created_repo = Repository.objects.get_or_create(
+                        name=repo_full_name,
+                        defaults=dict(
+                            organization_id=local_org.id,
+                            provider=f"integrations:{repo_meta.get('provider', 'github')}",
+                            external_id=str(repo_meta.get("external_id", "")),
+                            integration_id=local_integration_id,
+                            url=f"https://github.com/{repo_full_name}",
+                        ),
+                    )
+                    if created_repo:
+                        logger.info("Created repository '%s'", repo_full_name)
+                    repo_cache[repo_full_name] = repo_obj
+                else:
+                    logger.warning(
+                        "Repository '%s' not found and no repo metadata in run_state_value",
+                        repo_full_name,
+                    )
+                    repo_cache[repo_full_name] = None
+            except Repository.MultipleObjectsReturned:
+                repo_cache[repo_full_name] = Repository.objects.filter(name=repo_full_name).first()
+
+        repo = repo_cache[repo_full_name]
+        if repo is None:
+            errors += 1
+            continue
+
+        org_id = repo.organization_id
+
+        # Extract trigger_id (github_delivery_id) from run_state or metadata
+        trigger_id = None
+        for source in (state, metadata):
+            if source:
+                trigger_id = source.get("github_delivery_id")
+                if not trigger_id:
+                    request_data = source.get("request")
+                    if isinstance(request_data, dict):
+                        trigger_id = request_data.get("github_delivery_id")
+            if trigger_id:
+                break
+        if not trigger_id:
+            trigger_id = f"backfill-run-{run_id}"
+
+        # Check if already exists
+        if CodeReviewEvent.objects.filter(trigger_id=trigger_id).exists():
+            skipped += 1
+            continue
+
+        comments_posted_raw = row.get("comments_posted", "").strip()
+        comments_posted = int(comments_posted_raw) if comments_posted_raw else 0
+
+        # Extract timestamps from metadata, falling back to event_created_at
+        fallback_dt = parse_dt(row.get("event_created_at"))
+        ts = metadata or {}
+        source_trigger_at = parse_dt(ts.get("source_trigger_at")) or fallback_dt
+        sentry_received_at = parse_dt(ts.get("sentry_received_trigger_at")) or fallback_dt
+        seer_received_at = parse_dt(ts.get("seer_received_at")) or fallback_dt
+        started_at = parse_dt(ts.get("started_at")) or fallback_dt
+        completed_at = parse_dt(ts.get("completed_at"))
+
+        status = (
+            CodeReviewEventStatus.REVIEW_COMPLETED
+            if completed_at
+            else CodeReviewEventStatus.SENT_TO_SEER
+        )
+
+        pr_url = f"https://github.com/{repo_full_name}/pull/{pr_number}"
+        info = pr_info_by_repo.get(repo_full_name, {}).get(int(pr_number))
+        pr_title = info.title if info else None
+        pr_state = info.state if info else None
+
+        if dry_run:
+            logger.info(
+                "Would create: PR #%s '%s' (%s) run=%s delivery=%s comments=%d status=%s",
+                pr_number,
+                pr_title or "(no title)",
+                pr_state or "?",
+                run_id,
+                trigger_id,
+                comments_posted,
+                status,
+            )
+            created += 1
+            continue
+
+        try:
+            CodeReviewEvent.objects.create(
+                organization_id=org_id,
+                repository_id=repo.id,
+                pr_number=int(pr_number),
+                pr_title=pr_title,
+                pr_author=row.get("pr_author", "").strip() or None,
+                pr_url=pr_url,
+                pr_state=pr_state,
+                raw_event_type="pull_request",
+                raw_event_action="opened",
+                trigger_id=trigger_id,
+                trigger=row.get("trigger", "").strip() or None,
+                trigger_user=row.get("trigger_user", "").strip() or None,
+                trigger_at=source_trigger_at,
+                status=status,
+                seer_run_id=run_id,
+                comments_posted=comments_posted,
+                webhook_received_at=sentry_received_at,
+                sent_to_seer_at=seer_received_at,
+                review_started_at=started_at,
+                review_completed_at=completed_at or fallback_dt,
+            )
+            created += 1
+        except Exception:
+            logger.exception("Row %d (run=%s): error creating record", i + 1, run_id)
+            errors += 1
+
+    action = "Would create" if dry_run else "Created"
+    logger.info("%s %d, skipped %d (already exist), errors %d", action, created, skipped, errors)
+
+
+if __name__ == "__main__":
+    main()
+else:
+    # When run via `sentry exec`, __name__ is not __main__
+    main()

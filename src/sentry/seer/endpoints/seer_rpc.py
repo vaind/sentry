@@ -75,6 +75,7 @@ from sentry.seer.assisted_query.traces_tools import (
 from sentry.seer.autofix.autofix_tools import get_error_event_details, get_profile_details
 from sentry.seer.autofix.coding_agent import launch_coding_agents_for_run
 from sentry.seer.autofix.utils import AutofixTriggerSource
+from sentry.seer.code_review.webhooks.on_completion import process_pr_review_status_update
 from sentry.seer.constants import SEER_SUPPORTED_SCM_PROVIDERS
 from sentry.seer.entrypoints.operator import SeerOperator, process_autofix_updates
 from sentry.seer.explorer.custom_tool_utils import call_custom_tool
@@ -508,20 +509,9 @@ def get_github_enterprise_integration_config(
 
 def send_seer_webhook(*, event_name: str, organization_id: int, payload: dict) -> dict:
     """
-    Handles receipt (in Sentry, from Seer) of a seer webhook event for an organization.
-
-    Previously, this just broadcast webhooks to the relevant Sentry Apps.
-    Now, it allows other Sentry features to leverage this signal.
-
-    Args:
-        event_name: The sub-name of seer event (e.g., "root_cause_started")
-        organization_id: The ID of the organization to send the webhook for
-        payload: The webhook payload data
-
-    Returns:
-        dict: Status of the webhook sending operation
+    Handle a Seer webhook event by dispatching to internal consumers
+    (e.g. pr_review_status_update, autofix) and broadcasting to Sentry Apps.
     """
-    # Validate event_name by constructing the full event type and checking if it's valid
     from sentry.sentry_apps.metrics import SentryAppEventType
 
     event_type = f"seer.{event_name}"
@@ -545,6 +535,9 @@ def send_seer_webhook(*, event_name: str, organization_id: int, payload: dict) -
             extra={"organization_id": organization_id},
         )
         return {"success": False, "error": "Organization not found or not active"}
+
+    if event_name == "pr_review_status_update":
+        process_pr_review_status_update.delay(organization_id=organization_id, payload=payload)
 
     if SeerOperator.has_access(organization=organization):
         process_autofix_updates.apply_async(
