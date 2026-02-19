@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db.models import CharField, Count, Q, Sum, Value
+from django.db.models import CharField, Count, Min, Q, Sum, Value
 from django.db.models.functions import Cast, Coalesce, Concat, TruncDay, TruncHour
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -97,26 +97,36 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
 
         interval = request.GET.get("interval", "1d")
         trunc_fn = TruncHour if interval == "1h" else TruncDay
+        hourly = interval == "1h"
 
+        # Event-level time series (reviewed/skipped/comments per bucket)
         time_series = (
             queryset.annotate(bucket=trunc_fn("trigger_at"))
             .values("bucket")
             .annotate(
-                prs=Count(
-                    Concat(
-                        Cast("repository_id", output_field=CharField()),
-                        Value("-"),
-                        Cast("pr_number", output_field=CharField()),
-                    ),
-                    distinct=True,
-                    filter=Q(pr_number__isnull=False),
-                ),
                 reviewed=Count("id", filter=REVIEWED_STATUSES),
                 skipped=Count("id", filter=SKIPPED_STATUSES),
                 comments=Coalesce(Sum("comments_posted", filter=REVIEWED_STATUSES), 0),
             )
             .order_by("bucket")
         )
+
+        # PR-level: count each PR in the bucket of its first event, not every event's bucket
+        pr_first_events = (
+            queryset.filter(pr_number__isnull=False)
+            .values("repository_id", "pr_number")
+            .annotate(first_trigger=Min("trigger_at"))
+        )
+        prs_per_bucket: dict[str, int] = {}
+        for pr in pr_first_events:
+            ft = pr["first_trigger"]
+            bucket = (
+                ft.replace(minute=0, second=0, microsecond=0)
+                if hourly
+                else ft.replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            key = bucket.isoformat()
+            prs_per_bucket[key] = prs_per_bucket.get(key, 0) + 1
 
         return Response(
             {
@@ -132,7 +142,7 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
                 "timeSeries": [
                     {
                         "date": entry["bucket"].isoformat(),
-                        "prs": entry["prs"],
+                        "prs": prs_per_bucket.get(entry["bucket"].isoformat(), 0),
                         "reviewed": entry["reviewed"],
                         "skipped": entry["skipped"],
                         "comments": entry["comments"],

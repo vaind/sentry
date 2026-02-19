@@ -109,9 +109,9 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
     return {
       xAxisLabels: labels,
       series: [
-        makeSeries(t('PRs'), e => e.prs, 'prs'),
-        makeSeries(t('Skipped'), e => e.skipped, 'prs'),
-        makeSeries(t('Reviews'), e => e.reviewed),
+        makeSeries(t('PRs'), e => e.prs),
+        makeSeries(t('Reviews'), e => e.reviewed, 'outcomes'),
+        makeSeries(t('Skipped'), e => e.skipped, 'outcomes'),
         makeSeries(t('Comments'), e => e.comments),
       ],
     };
