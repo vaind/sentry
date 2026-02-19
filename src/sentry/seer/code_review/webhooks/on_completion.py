@@ -34,12 +34,18 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     namespace=seer_tasks,
     retry=None,
 )
-def process_pr_review_completion(*, payload: dict[str, Any]) -> None:
+def process_pr_review_completion(*, organization_id: int, payload: dict[str, Any]) -> None:
     trigger_id = payload.get("trigger_id")
-    if not trigger_id:
+    repository_id = payload.get("repository_id")
+
+    if not trigger_id or not repository_id:
         logger.warning(
-            "seer.code_review.webhook.missing_trigger_id",
-            extra={"payload_keys": list(payload.keys())},
+            "seer.code_review.webhook.missing_required_fields",
+            extra={
+                "payload_keys": list(payload.keys()),
+                "has_trigger_id": bool(trigger_id),
+                "has_repository_id": bool(repository_id),
+            },
         )
         return
 
@@ -50,13 +56,19 @@ def process_pr_review_completion(*, payload: dict[str, Any]) -> None:
     started_at = payload.get("started_at")
     completed_at = payload.get("completed_at")
 
-    event_record = CodeReviewEvent.objects.filter(trigger_id=trigger_id).first()
+    event_record = CodeReviewEvent.objects.filter(
+        trigger_id=trigger_id,
+        organization_id=organization_id,
+        repository_id=repository_id,
+    ).first()
 
     if event_record is None:
         logger.warning(
             "seer.code_review.webhook.no_matching_event",
             extra={
                 "trigger_id": trigger_id,
+                "organization_id": organization_id,
+                "repository_id": repository_id,
                 "seer_run_id": seer_run_id,
             },
         )

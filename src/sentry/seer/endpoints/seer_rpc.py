@@ -537,7 +537,7 @@ def send_seer_webhook(*, event_name: str, organization_id: int, payload: dict) -
         return {"success": False, "error": "Organization not found or not active"}
 
     if event_name == "pr_review_completed":
-        process_pr_review_completion.delay(payload=payload)
+        process_pr_review_completion.delay(organization_id=organization_id, payload=payload)
 
     if SeerOperator.has_access(organization=organization):
         process_autofix_updates.apply_async(

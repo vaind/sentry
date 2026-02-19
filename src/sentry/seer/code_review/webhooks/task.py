@@ -44,6 +44,8 @@ def schedule_task(
     target_commit_sha: str,
     event_record: Any | None = None,
 ) -> None:
+    trigger_id = getattr(event_record, "trigger_id", None) if event_record else None
+
     transformed_event = transform_webhook_to_codegen_request(
         github_event=github_event,
         github_event_action=github_event_action,
@@ -51,6 +53,7 @@ def schedule_task(
         organization=organization,
         repo=repo,
         target_commit_sha=target_commit_sha,
+        trigger_id=trigger_id,
     )
 
     if transformed_event is None:
@@ -59,8 +62,6 @@ def schedule_task(
         )
         update_event_status(event_record, "webhook_filtered", denial_reason="transform_failed")
         return
-
-    trigger_id = getattr(event_record, "trigger_id", None) if event_record else None
 
     process_github_webhook_event.delay(
         github_event=github_event.value,
