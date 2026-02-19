@@ -75,7 +75,7 @@ from sentry.seer.assisted_query.traces_tools import (
 from sentry.seer.autofix.autofix_tools import get_error_event_details, get_profile_details
 from sentry.seer.autofix.coding_agent import launch_coding_agents_for_run
 from sentry.seer.autofix.utils import AutofixTriggerSource
-from sentry.seer.code_review.webhooks.on_completion import process_pr_review_completion
+from sentry.seer.code_review.webhooks.on_completion import process_pr_review_status_update
 from sentry.seer.constants import SEER_SUPPORTED_SCM_PROVIDERS
 from sentry.seer.entrypoints.operator import SeerOperator, process_autofix_updates
 from sentry.seer.explorer.custom_tool_utils import call_custom_tool
@@ -510,7 +510,7 @@ def get_github_enterprise_integration_config(
 def send_seer_webhook(*, event_name: str, organization_id: int, payload: dict) -> dict:
     """
     Handle a Seer webhook event by dispatching to internal consumers
-    (e.g. pr_review_completed, autofix) and broadcasting to Sentry Apps.
+    (e.g. pr_review_status_update, autofix) and broadcasting to Sentry Apps.
     """
     from sentry.sentry_apps.metrics import SentryAppEventType
 
@@ -536,8 +536,8 @@ def send_seer_webhook(*, event_name: str, organization_id: int, payload: dict) -
         )
         return {"success": False, "error": "Organization not found or not active"}
 
-    if event_name == "pr_review_completed":
-        process_pr_review_completion.delay(organization_id=organization_id, payload=payload)
+    if event_name == "pr_review_status_update":
+        process_pr_review_status_update.delay(organization_id=organization_id, payload=payload)
 
     if SeerOperator.has_access(organization=organization):
         process_autofix_updates.apply_async(

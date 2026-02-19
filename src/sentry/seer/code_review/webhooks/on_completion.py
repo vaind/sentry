@@ -30,11 +30,11 @@ def _parse_timestamp(value: str | None) -> datetime | None:
 
 
 @instrumented_task(
-    name="sentry.seer.code_review.webhooks.on_completion.process_pr_review_completion",
+    name="sentry.seer.code_review.webhooks.on_completion.process_pr_review_status_update",
     namespace=seer_tasks,
     retry=None,
 )
-def process_pr_review_completion(*, organization_id: int, payload: dict[str, Any]) -> None:
+def process_pr_review_status_update(*, organization_id: int, payload: dict[str, Any]) -> None:
     trigger_id = payload.get("trigger_id")
     repository_id = payload.get("repository_id")
 

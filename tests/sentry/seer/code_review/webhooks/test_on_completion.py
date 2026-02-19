@@ -1,5 +1,5 @@
 from sentry.models.code_review_event import CodeReviewEventStatus
-from sentry.seer.code_review.webhooks.on_completion import process_pr_review_completion
+from sentry.seer.code_review.webhooks.on_completion import process_pr_review_status_update
 from sentry.testutils.cases import TestCase
 
 
@@ -17,7 +17,7 @@ class TestProcessPrReviewCompletion(TestCase):
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "match-by-delivery",
@@ -35,7 +35,7 @@ class TestProcessPrReviewCompletion(TestCase):
 
     def test_no_op_when_missing_required_fields(self) -> None:
         # Should not raise — just logs a warning and returns
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "some-trigger",
@@ -47,7 +47,7 @@ class TestProcessPrReviewCompletion(TestCase):
 
     def test_no_op_when_trigger_id_not_found(self) -> None:
         # Should not raise — just logs a warning and returns
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "does-not-exist",
@@ -67,7 +67,7 @@ class TestProcessPrReviewCompletion(TestCase):
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "fail-delivery",
@@ -92,7 +92,7 @@ class TestProcessPrReviewCompletion(TestCase):
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "started-delivery",
@@ -117,7 +117,7 @@ class TestProcessPrReviewCompletion(TestCase):
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "ts-delivery",
@@ -143,7 +143,7 @@ class TestProcessPrReviewCompletion(TestCase):
             status=CodeReviewEventStatus.SENT_TO_SEER,
         )
 
-        process_pr_review_completion(
+        process_pr_review_status_update(
             organization_id=self.organization.id,
             payload={
                 "trigger_id": "bad-ts-delivery",

@@ -150,4 +150,4 @@ class SentryAppEventType(StrEnum):
     SEER_IMPACT_ASSESSMENT_STARTED = "seer.impact_assessment_started"
     SEER_IMPACT_ASSESSMENT_COMPLETED = "seer.impact_assessment_completed"
     SEER_PR_CREATED = "seer.pr_created"
-    SEER_PR_REVIEW_COMPLETED = "seer.pr_review_completed"
+    SEER_PR_REVIEW_STATUS_UPDATE = "seer.pr_review_status_update"
