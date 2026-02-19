@@ -180,6 +180,8 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
               showMaxLabel: true,
               color: theme.tokens.content.secondary,
               fontFamily: theme.font.family.sans,
+              // Override XAxis default formatter which returns '' for non-date category axes
+              formatter: (value: string) => value,
             },
           }}
           tooltip={{trigger: 'axis'}}
