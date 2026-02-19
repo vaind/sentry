@@ -1,4 +1,3 @@
-import getDuration from 'sentry/utils/duration/getDuration';
 import {toTitleCase} from 'sentry/utils/string/toTitleCase';
 import type {TagVariant} from 'sentry/utils/theme/types';
 
@@ -36,6 +35,21 @@ export function formatStatus(status: string): string {
   return toTitleCase(status.replace(/_/g, ' '));
 }
 
+/** e.g. 1500 -> "2s", 65000 -> "1m 5s", 3600000 -> "1h 0m" */
 export function formatDurationMs(ms: number): string {
-  return getDuration(ms / 1000, 0, false, true);
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+  const totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) {
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}m`;
 }
