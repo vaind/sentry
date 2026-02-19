@@ -35,7 +35,8 @@ function generateDateRange(timeRange: string): Date[] {
   if (timeRange === '24h') {
     for (let i = 23; i >= 0; i--) {
       const date = new Date(now);
-      date.setHours(date.getHours() - i, 0, 0, 0);
+      // Use UTC hours to match server-side TruncHour(trigger_at) which truncates in UTC
+      date.setUTCHours(date.getUTCHours() - i, 0, 0, 0);
       dates.push(date);
     }
   } else {
@@ -48,8 +49,9 @@ function generateDateRange(timeRange: string): Date[] {
     const count = days[timeRange] ?? 14;
     for (let i = count - 1; i >= 0; i--) {
       const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
+      // Use UTC date arithmetic to match server-side TruncDay(trigger_at) which truncates in UTC
+      date.setUTCDate(date.getUTCDate() - i);
+      date.setUTCHours(0, 0, 0, 0);
       dates.push(date);
     }
   }
@@ -78,8 +80,9 @@ export function PrReviewStats({stats, statusFilter, timeRange}: Props) {
     }
 
     const allDates = generateDateRange(timeRange);
+    // Use UTC formatting to match server-side UTC bucketing (TruncDay/TruncHour on trigger_at)
     const labelFormat = hourly ? 'LT' : 'MMM D';
-    const labels = allDates.map(d => getFormattedDate(d, labelFormat, {local: true}));
+    const labels = allDates.map(d => getFormattedDate(d, labelFormat, {local: false}));
 
     type TimeSeriesEntry = CodeReviewStats['timeSeries'][0];
     const empty: TimeSeriesEntry = {
