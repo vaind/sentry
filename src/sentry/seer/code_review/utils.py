@@ -295,7 +295,6 @@ def transform_issue_comment_to_codegen_request(
     config["trigger_at"] = trigger_metadata["trigger_at"]
     config["sentry_received_trigger_at"] = datetime.now(timezone.utc).isoformat()
     config["trigger_id"] = trigger_id
-    config["repository_id"] = repo.id
     return payload
 
 
@@ -340,7 +339,6 @@ def transform_pull_request_to_codegen_request(
     config["trigger_at"] = trigger_metadata["trigger_at"]
     config["sentry_received_trigger_at"] = datetime.now(timezone.utc).isoformat()
     config["trigger_id"] = trigger_id
-    config["repository_id"] = repo.id
     return payload
 
 
@@ -360,6 +358,7 @@ def _build_repo_definition(repo: Repository, target_commit_sha: str) -> dict[str
         "external_id": repo.external_id,
         "base_commit_sha": target_commit_sha,
         "organization_id": repo.organization_id,
+        "repository_id": repo.id,
     }
 
     # add integration_id which is used in pr_closed_step for product metrics dashboarding only
