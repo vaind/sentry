@@ -108,7 +108,10 @@ def _extract_trigger_timestamp(raw_event_type: str, event: Mapping[str, Any]) ->
     if not timestamp_str:
         return datetime.now(timezone.utc)
     try:
-        return datetime.fromisoformat(timestamp_str)
+        dt = datetime.fromisoformat(timestamp_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except (ValueError, TypeError):
         return datetime.now(timezone.utc)
 
