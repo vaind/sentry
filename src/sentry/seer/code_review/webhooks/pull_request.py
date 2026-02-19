@@ -14,12 +14,12 @@ from sentry.integrations.github.client import GitHubReaction
 from sentry.integrations.github.utils import is_github_rate_limit_sensitive
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.integrations.services.integration import RpcIntegration
-from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
+from sentry.models.code_review_event import CodeReviewEventStatus
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.models.repositorysettings import CodeReviewSettings, CodeReviewTrigger
 
-from ..event_recorder import update_event_status
+from ..event_recorder import create_event_record, update_event_status
 from ..metrics import (
     CodeReviewErrorType,
     WebhookFilteredReason,
@@ -91,13 +91,13 @@ ACTIONS_ELIGIBLE_FOR_EYES_REACTION: set[PullRequestAction] = {
 def handle_pull_request_event(
     *,
     github_event: GithubWebhookType,
+    github_delivery_id: str | None = None,
     event: Mapping[str, Any],
     organization: Organization,
     repo: Repository,
     integration: RpcIntegration | None = None,
     org_code_review_settings: CodeReviewSettings | None = None,
     extra: Mapping[str, str | None],
-    event_record: CodeReviewEvent | None = None,
     **kwargs: Any,
 ) -> None:
     """Handle pull_request webhook events by validating and forwarding to Seer."""
@@ -124,9 +124,6 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
-        update_event_status(
-            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="unsupported_action"
-        )
         return
 
     if action not in ALLOWED_ACTIONS:
@@ -134,10 +131,18 @@ def handle_pull_request_event(
         record_webhook_filtered(
             github_event, action_value, WebhookFilteredReason.UNSUPPORTED_ACTION
         )
-        update_event_status(
-            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="unsupported_action"
-        )
         return
+
+    # Action is supported — create the event record
+    event_record = create_event_record(
+        organization_id=organization.id,
+        repository_id=repo.id,
+        raw_event_type=github_event.value,
+        raw_event_action=action_value,
+        trigger_id=github_delivery_id,
+        event=event,
+        status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
+    )
 
     action_requires_trigger_permission = ACTIONS_REQUIRING_TRIGGER_CHECK.get(action)
     if action_requires_trigger_permission is not None and (

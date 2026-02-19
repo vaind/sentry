@@ -17,7 +17,7 @@ from pydantic import BaseModel, ValidationError
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.models.code_review_event import CodeReviewEventStatus
 
-from ..event_recorder import update_event_status
+from ..event_recorder import create_event_record, update_event_status
 from ..metrics import (
     CodeReviewErrorType,
     WebhookFilteredReason,
@@ -68,9 +68,11 @@ class GitHubCheckRunEvent(BaseModel):
 def handle_check_run_event(
     *,
     github_event: GithubWebhookType,
+    github_delivery_id: str | None = None,
     event: Mapping[str, Any],
     extra: Mapping[str, str | None],
-    event_record: Any | None = None,
+    organization: Any | None = None,
+    repo: Any | None = None,
     **kwargs: Any,
 ) -> None:
     if github_event != GithubWebhookType.CHECK_RUN:
@@ -91,9 +93,6 @@ def handle_check_run_event(
 
     if action != GitHubCheckRunAction.REREQUESTED:
         record_webhook_filtered(github_event, action, WebhookFilteredReason.UNSUPPORTED_ACTION)
-        update_event_status(
-            event_record, CodeReviewEventStatus.WEBHOOK_FILTERED, denial_reason="unsupported_action"
-        )
         return
 
     try:
@@ -108,10 +107,21 @@ def handle_check_run_event(
         )
         return
 
+    # Action is supported — create the event record
+    event_record = None
+    if organization is not None and repo is not None:
+        event_record = create_event_record(
+            organization_id=organization.id,
+            repository_id=repo.id,
+            raw_event_type=github_event.value,
+            raw_event_action=action,
+            trigger_id=github_delivery_id,
+            event=event,
+            status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
+        )
+
     # Import here to avoid circular dependency with webhook_task
     from .task import process_github_webhook_event
-
-    trigger_id = getattr(event_record, "trigger_id", None) if event_record else None
 
     process_github_webhook_event.delay(
         github_event=github_event.value,
@@ -119,7 +129,7 @@ def handle_check_run_event(
         action=validated_event.action,
         html_url=validated_event.check_run.html_url,
         enqueued_at_str=datetime.now(timezone.utc).isoformat(),
-        trigger_id=trigger_id,
+        trigger_id=github_delivery_id,
     )
     record_webhook_enqueued(github_event, action)
     update_event_status(event_record, CodeReviewEventStatus.TASK_ENQUEUED)

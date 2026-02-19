@@ -117,23 +117,13 @@ def handle_webhook_event(
                 logger.warning("github.webhook.code_review.duplicate_delivery_skipped", extra=extra)
                 return
 
-    event_record = create_event_record(
-        organization_id=organization.id,
-        repository_id=repo.id,
-        raw_event_type=github_event.value,
-        raw_event_action=event.get("action", "unknown"),
-        trigger_id=github_delivery_id,
-        event=event,
-        status=CodeReviewEventStatus.WEBHOOK_RECEIVED,
-    )
-
     handler(
         github_event=github_event,
+        github_delivery_id=github_delivery_id,
         event=event,
         organization=organization,
         repo=repo,
         integration=integration,
         org_code_review_settings=preflight.settings,
         extra=extra,
-        event_record=event_record,
     )
