@@ -13,6 +13,7 @@ from sentry.api.bases.organization import OrganizationEndpoint
 from sentry.models.code_review_event import CodeReviewEvent, CodeReviewEventStatus
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
+from sentry.search.utils import parse_datetime_string
 
 SKIPPED_STATUSES = Q(
     status__in=[CodeReviewEventStatus.PREFLIGHT_DENIED, CodeReviewEventStatus.WEBHOOK_FILTERED]
@@ -47,13 +48,13 @@ class OrganizationCodeReviewStatsEndpoint(OrganizationEndpoint):
         if pr_state:
             queryset = queryset.filter(pr_state=pr_state)
 
-        start = request.GET.get("start")
-        if start:
-            queryset = queryset.filter(trigger_at__gte=start)
+        start_str = request.GET.get("start")
+        if start_str:
+            queryset = queryset.filter(trigger_at__gte=parse_datetime_string(start_str))
 
-        end = request.GET.get("end")
-        if end:
-            queryset = queryset.filter(trigger_at__lte=end)
+        end_str = request.GET.get("end")
+        if end_str:
+            queryset = queryset.filter(trigger_at__lte=parse_datetime_string(end_str))
 
         # Event-level counts
         review_events = queryset.filter(REVIEWED_STATUSES)

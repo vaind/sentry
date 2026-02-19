@@ -16,6 +16,7 @@ from sentry.api.paginator import OffsetPaginator
 from sentry.models.code_review_event import CodeReviewEvent
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
+from sentry.search.utils import parse_datetime_string
 
 
 @region_silo_endpoint
@@ -39,13 +40,13 @@ class OrganizationCodeReviewPRsEndpoint(OrganizationEndpoint):
         if trigger_type:
             queryset = queryset.filter(trigger=trigger_type)
 
-        start = request.GET.get("start")
-        if start:
-            queryset = queryset.filter(trigger_at__gte=start)
+        start_str = request.GET.get("start")
+        if start_str:
+            queryset = queryset.filter(trigger_at__gte=parse_datetime_string(start_str))
 
-        end = request.GET.get("end")
-        if end:
-            queryset = queryset.filter(trigger_at__lte=end)
+        end_str = request.GET.get("end")
+        if end_str:
+            queryset = queryset.filter(trigger_at__lte=parse_datetime_string(end_str))
 
         pr_groups = (
             queryset.filter(pr_number__isnull=False)
