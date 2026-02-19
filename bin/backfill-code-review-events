@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
-DEV ONLY:
-Backfill CodeReviewEvent records.
+DEV ONLY: Backfill CodeReviewEvent records.
 
 Usage:
     1. Export as CSV:
