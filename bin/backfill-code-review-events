@@ -5,10 +5,9 @@ Backfill CodeReviewEvent records.
 
 Usage:
     1. Export as CSV:
-       https://redash.getsentry.net/queries/10580/source
+        https://redash.getsentry.net/queries/10580/source
 
     2. Run this script:
-
         sentry exec bin/backfill-code-review-events events.csv
         sentry exec bin/backfill-code-review-events events.csv --dry-run
 """
