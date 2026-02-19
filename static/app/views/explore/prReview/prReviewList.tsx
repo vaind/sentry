@@ -55,7 +55,7 @@ export function PrReviewList({prs, isLoading, pageLinks, paginationCaption}: Pro
 
   return (
     <Fragment>
-      <PanelTable
+      <StyledPanelTable
         headers={[
           t('Pull Request'),
           t('Status'),
@@ -107,11 +107,17 @@ export function PrReviewList({prs, isLoading, pageLinks, paginationCaption}: Pro
             </div>
           </RowWrapper>
         ))}
-      </PanelTable>
+      </StyledPanelTable>
       <Pagination pageLinks={pageLinks} caption={paginationCaption} />
     </Fragment>
   );
 }
+
+const StyledPanelTable = styled(PanelTable)`
+  [data-test-id='table-header'] {
+    border-bottom: 1px solid ${p => p.theme.tokens.border.primary};
+  }
+`;
 
 const RowWrapper = styled('div')`
   display: grid;
